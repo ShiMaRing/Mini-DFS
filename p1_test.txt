@@ -1,0 +1,69 @@
+fd421458c6f18f35834d44dab64f0f09f125d41d  2.bin
+fd421458c6f18f35834d44dab64f0f09f125d41d  2.bin
+
+a3998e014e54afd2c9679319e904a67044427860  4.bin
+a3998e014e54afd2c9679319e904a67044427860  4.bin
+
+f2cf3abaf26e32235e6cc4364d6d7c7ff2fa3892  6.bin
+f2cf3abaf26e32235e6cc4364d6d7c7ff2fa3892  6.bin
+f2cf3abaf26e32235e6cc4364d6d7c7ff2fa3892  6.bin
+f2cf3abaf26e32235e6cc4364d6d7c7ff2fa3892  6.bin
+
+
+client1 => go run client/client.go 11 orion11 22900 , storage path: /bigdata/lliu78/storage/11
+
+client2 => go run client/client.go 12 orion12 22901 , storage path: /bigdata/lliu78/storage/12
+----------------------------------------------------------------------------------------------
+
+Client1:
+1. store file 2.bin under folder /demo
+2. store file 4.bin under folder /demo
+3. store file 6.bin under folder /demo
+
+Client2:
+1. store file 4.bin under folder /demo => reject
+2. store file 4.bin under folder /demo2 => success
+3. ls => show the file tree
+		/demo
+			2.bin
+			4.bin
+			6.bin
+		/demo2
+			4.bin
+
+4. getMap => show info about each storage node
+
+Client1:
+1. delete 4.bin /demo => delete file under folder /demo
+2. ls => /demo
+			2.bin
+			6.bin
+		/demo2
+			4.bin
+
+
+Client2:
+1. get 2.bin /demo
+2. get 6.bin /demo
+3. get 4.bin /demo2
+
+Go to "/bigdata/lliu78/storage/12" => verify checksum => done
+
+
+1. Shutdown the controler
+	pkill -u "$(whoami)" controller
+2. restart controler
+	"${HOME}/go/bin/controller"
+
+Client1:
+1.get 6.bin /demo => Go to "/bigdata/lliu78/storage/11" => verify checksum => done
+
+Shutdown storage node => node 9, node 8 => 9 dead, 8 dead
+
+pkill -u "$(whoami)" storageNode
+
+Client2:
+1. getMap => orion09 and orion08 should gone
+2. go to "/bigdata/lliu78/storage/12"
+	delete file 6.bin
+3. get 6.bin /demo => verify checksum => done!

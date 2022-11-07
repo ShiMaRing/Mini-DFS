@@ -1,0 +1,144 @@
+syntax = "proto3";
+option go_package = "./messages";
+
+/* Register a username */
+message Registration {
+    int32 id = 1;
+    string host = 2;
+    int32 port = 3;
+}
+
+message PutRequest {
+    int32 clientId = 1;
+    string fileName = 2;
+    int32 numOfChunk = 3;
+    string dirName = 4;
+}
+message PutResponse {
+    map<string, ChunkNodeInfo> chunkMap = 1;
+    string dirName = 2;
+}
+
+message GetRequest {
+    string fileName = 1;
+    string dirName = 2;
+    int32 id = 3;
+}
+
+message GetResponse {
+    map<string, NodeMap> getResponse = 1;
+    string dirName = 2;
+}
+
+
+message StoreNode {
+    int32 id = 1;
+    string ip = 2;
+    int32 port = 3;
+}
+
+message NodeMap {
+    map<int32, ChunkNodeInfo> nodeMap = 1;
+}
+
+message HeartBeat {
+    int32 id = 1;
+    string host = 2;
+    int32 port = 3;
+    int64 free_space = 4;
+    int64 number_of_requests = 5;
+}
+
+message ReplicaChunk{
+    int32 index = 1; // list index
+    repeated StoreNode nodeLists = 2;
+    bytes chunk = 3;
+    string fileName = 4;
+    int32 check_index = 5;
+    string dirName = 6;
+}
+
+message FileNotExist {
+    string file_name = 1;
+    string error_msg = 2;
+}
+message FileExist {
+    string filename = 1;
+}
+
+message AckReplicaChunk{
+    bool replica_success = 1;
+    int32 id = 2;
+    string file_name =3;
+    int32 chunk_index = 4;
+}
+
+message GetReplica{
+    string clientHost = 1;
+    int32 clientPort = 2;
+    string file_name = 3;
+    int32 chunk_index = 4;
+    string dirName = 5;
+}
+
+message ReturnReplica{
+    bytes chunk = 1;
+    int32 id = 2;
+}
+
+message DeleteReplicas{
+    string fileName = 1;
+    string dirName = 2;
+    repeated int32 chunkToDeleteList = 3;
+}
+
+message DeleteRequest {
+    string fileName = 1;
+    string filePath = 2;
+    int32 clientId = 3;
+}
+
+message ChunkNodeInfo {
+    repeated StoreNode nodeList = 1;
+}
+
+message GetMapRequest{
+    int32 id = 1;
+}
+
+message LsRequest {
+    int32 clientId = 1;
+    string dirName = 2;
+}
+
+message LsResponse {
+    string response = 1;
+}
+
+message SendMapResponse{
+    map<int32, HeartBeat> dataMap = 1;
+}
+message Wrapper {
+    oneof msg {
+        Registration registration_message = 1;
+        PutRequest put_request = 2;
+        PutResponse put_response = 3;
+        HeartBeat heartbeat_message = 4;
+        ReplicaChunk replicaChunk_message = 5;
+        AckReplicaChunk ack_replica_chunk_message = 6;
+        GetReplica get_replica_message = 7;
+        ReturnReplica return_chunk_message = 8;
+        DeleteReplicas delete_replicas_message = 9;
+        ChunkNodeInfo chunk_node_info_message = 10;
+        GetMapRequest get_map_request_message = 11;
+        SendMapResponse send_map_response_message = 12;
+        GetRequest get_request_message = 13;
+        GetResponse get_response_message = 14;
+        NodeMap nodeMap_message = 15;
+        FileNotExist file_not_exist_message = 16;
+        DeleteRequest delete_request_message = 17;
+        LsRequest ls_request_message = 18;
+        LsResponse ls_response_message = 19;
+        FileExist file_exist_message = 20;
+    }
+}
