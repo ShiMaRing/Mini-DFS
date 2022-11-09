@@ -40,7 +40,7 @@ type ReduceTask struct {
 	dirName     string
 	jobFilePath string
 	basePath    string
-	data        map[int32]*[]Result //chunkId - chunk Data
+	data        map[int32][]*Result //chunkId - chunk Data
 	//    dirname
 	//               |- reduce-id             //basePath
 	//                          |--            jobName
@@ -176,6 +176,13 @@ func (storageNode *StorageNode) receiveMsg(msgHandler *messages.MessageHandler) 
 			dirName := msg.DeleteReplicasMessage.GetDirName()
 			chunkIndexList := msg.DeleteReplicasMessage.ChunkToDeleteList
 			storageNode.processDeleteReplica(fileName, dirName, chunkIndexList)
+		case *messages.Wrapper_SendMapResult:
+			//receive map result
+			jobId := msg.SendMapResult.GetJobId()
+			idx := msg.SendMapResult.GetChunkIdx()
+			data := msg.SendMapResult.GetData()
+			storageNode.processMapResult(idx, jobId, data)
+
 		case nil:
 			log.Println("Received an empty message, close connection")
 		default:
@@ -466,18 +473,15 @@ func SendMapResult(node *messages.StoreNode, result *messages.SendMapResult) {
 func (storageNode *StorageNode) processReduceTask(fileName, jobName string, jobContent []byte, dirName string, jobId uint32) {
 	if _, ok := storageNode.ReduceTask[jobId]; !ok {
 		storageNode.ReduceTask[jobId] = &ReduceTask{
-			mu:         sync.Mutex{},
-			jobName:    jobName,
-			jobContent: jobContent,
-			fileName:   fileName,
-			dirName:    dirName,
-			data:       make(map[int32]*[]Result),
+			mu:   sync.Mutex{},
+			data: make(map[int32][]*Result),
 		}
-	} else {
-		//may be map send data before
-		storageNode.ReduceTask[jobId].jobName = jobName
-		storageNode.ReduceTask[jobId].jobContent = jobContent
 	}
+	//may be map send data before
+	storageNode.ReduceTask[jobId].jobName = jobName
+	storageNode.ReduceTask[jobId].jobContent = jobContent
+	storageNode.ReduceTask[jobId].fileName = fileName
+	storageNode.ReduceTask[jobId].dirName = dirName
 	//make work dir
 	basePath := storageNode.SavePath + "/" + dirName + "/" + "reduce-" + strconv.Itoa(int(jobId))
 	os.MkdirAll(basePath, os.ModePerm)
@@ -493,6 +497,23 @@ func (storageNode *StorageNode) processReduceTask(fileName, jobName string, jobC
 	if err != nil {
 		log.Fatalf("write job content fail %v \n", err)
 	}
+}
+
+//fileName, dirName, idx, dirName, jobId, data
+func (storageNode *StorageNode) processMapResult(idx int32, jobId uint32, data []byte) {
+	if _, ok := storageNode.ReduceTask[jobId]; !ok {
+		storageNode.ReduceTask[jobId] = &ReduceTask{
+			mu:   sync.Mutex{},
+			data: make(map[int32][]*Result),
+		}
+	}
+	task := storageNode.ReduceTask[jobId]
+	mapResult := make([]*Result, 0)
+	err := json.Unmarshal(data, mapResult)
+	if err != nil {
+		log.Println("convert data to result list fail ", err)
+	}
+	task.data[idx] = mapResult //the data of chunk to be reduced
 }
 func main() {
 	// id, host, port, saved path

@@ -30,19 +30,19 @@ type Controller struct {
 	writer          *writeToFile.JsonWriter
 
 	jobId   uint32
-	taskMap map[string]*Task //jobId - clientId
+	taskMap map[uint32]*Task //jobId - clientId
 }
 
 type Task struct {
 	jobId    uint32     //auto increment
 	mu       sync.Mutex //avoid race
-	isFinish bool       //is finish
 	fileName string     //filename
 	dirName  string     //dirname
 
 	result      []*ReduceResult
 	mapNodes    map[string]*messages.StoreNode //key: nodeId-chunkIdx
 	reduceNodes []*messages.StoreNode          //all reduce node
+	clientId    int32
 }
 
 // ReduceResult reply to user to info reduce result place
@@ -58,7 +58,7 @@ const storagePath = "./bigdata/lliu78/storage/storage.json"
 const address = "localhost:22000"
 
 func NewController() *Controller {
-	c := Controller{fileTree: fileTree2.NewFileTree(path + "/"), taskMap: make(map[string]*Task)}
+	c := Controller{fileTree: fileTree2.NewFileTree(path + "/"), taskMap: make(map[uint32]*Task)}
 	if checkFileExist() {
 		c.readFile()
 	} else {
@@ -500,12 +500,11 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			clientId := msg.SubmitJobMessage.GetClientId() //client can get result via id and jobName
 			atomic.AddUint32(&c.jobId, 1)
 
-			key := strconv.Itoa(int(c.jobId)) + "-" + strconv.Itoa(int(clientId)) + "-" //such as 1-1
-
 			task := &Task{jobId: c.jobId}
 			task.fileName = fileName
 			task.dirName = dirName
 			task.mapNodes = make(map[string]*messages.StoreNode)
+			task.clientId = clientId
 			for node, chunkIdx := range mapNodeSet {
 				key := strconv.Itoa(int(node.Id)) + "-" + strconv.Itoa(int(chunkIdx))
 				task.mapNodes[key] = node
@@ -513,7 +512,7 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			for node := range reduceNodeSet {
 				task.reduceNodes = append(task.reduceNodes, node)
 			}
-			c.taskMap[key] = task //add task
+			c.taskMap[c.jobId] = task //add task
 			//send message to all map node
 			go c.sendReduceTask(jobName, jobContent, c.jobId, task.reduceNodes, fileName, dirName)
 			go c.sendMapTask(dirName, fileName, jobName, jobContent, mapNodeSet, c.jobId, task.reduceNodes)
@@ -546,6 +545,24 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			fmt.Println(wrapper)
 			dirName := msg.LsRequestMessage.GetDirName()
 			c.handleLsRequest(dirName, msgHandler)
+		case *messages.Wrapper_NotifyMapFinish:
+			//notify finish map
+			jobId := msg.NotifyMapFinish.GetJobId()
+			chunkId := msg.NotifyMapFinish.GetChunkId()
+			nodeId := msg.NotifyMapFinish.GetNodeId()
+			//search map for jobId
+			task := c.taskMap[jobId]
+			task.mu.Lock()
+			key := strconv.Itoa(int(nodeId)) + "-" + strconv.Itoa(int(chunkId))
+			delete(task.mapNodes, key)
+			task.mu.Unlock()
+			if len(task.mapNodes) == 0 {
+				//provide jobId and notify reduce to start job
+				startMsg := &messages.StartReduce{JobId: jobId}
+				for i := range task.reduceNodes {
+					c.startReduce(startMsg, task.reduceNodes[i])
+				}
+			}
 		case nil:
 			log.Println("Received an empty message, terminating client")
 			return
@@ -553,6 +570,22 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			log.Printf("Unexpected message type: %T", msg)
 		}
 	}
+}
+
+// A helper function converts the heartbeat msg to a getMap response.
+func (c *Controller) startReduce(msg *messages.StartReduce, node *messages.StoreNode) {
+	conn, err := net.Dial("tcp", node.Ip+":"+strconv.Itoa(int(node.Port)))
+	if err != nil {
+		log.Println("send start reduce to reduce node fail: " + err.Error())
+		return
+	}
+	msgHandler := messages.NewMessageHandler(conn)
+	wrapper := &messages.Wrapper{
+		Msg: &messages.Wrapper_StartReduce{
+			StartReduce: msg,
+		},
+	}
+	msgHandler.Send(wrapper)
 }
 
 // A helper function converts the heartbeat msg to a getMap response.

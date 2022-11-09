@@ -168,6 +168,9 @@ message SendReduceTask{
   string fileName = 4;
   string dirName = 5;
 }
+message StartReduce{
+  uint32 jobId = 1;
+}
 
 
 message Wrapper {
@@ -197,5 +200,6 @@ message Wrapper {
     SendReduceTask send_reduce_task = 23;
     SendMapResult send_map_result = 24;
     NotifyMapFinish notify_map_finish = 25;
+    StartReduce start_reduce = 26;
   }
 }
