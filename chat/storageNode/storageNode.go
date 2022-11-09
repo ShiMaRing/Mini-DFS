@@ -27,6 +27,24 @@ type StorageNode struct {
 	NumberOfRequests int64
 	SavePath         string
 	NeighborMap      sync.Map
+
+	ReduceTask map[uint32]*ReduceTask
+}
+
+// ReduceTask MapResult save the data come from map nodes
+type ReduceTask struct {
+	mu          sync.Mutex
+	jobName     string
+	jobContent  []byte
+	fileName    string
+	dirName     string
+	jobFilePath string
+	basePath    string
+	data        map[int32]*[]Result //chunkId - chunk Data
+	//    dirname
+	//               |- reduce-id             //basePath
+	//                          |--            jobName
+	//                                         reduceResult
 }
 
 // A helper function convert integer to string.
@@ -48,7 +66,8 @@ func NewStorageNode(id int32, host string, port int32, controllerHost string, co
 		log.Fatalln(err)
 	}
 	s := StorageNode{Id: id, Host: host, Port: port, controllerHost: controllerHost, controllerPort: controllerPort,
-		SavePath: savePath, FreeSpace: freeSpace * 1024, NumberOfRequests: numberOfRequests}
+		SavePath: savePath, FreeSpace: freeSpace * 1024, NumberOfRequests: numberOfRequests, ReduceTask: make(map[uint32]*ReduceTask),
+	}
 	// start to listen the incoming requests
 	go s.startListener()
 	go s.StartHeartBeat()
@@ -133,6 +152,16 @@ func (storageNode *StorageNode) receiveMsg(msgHandler *messages.MessageHandler) 
 			idx := msg.SendMapTask.GetChunkIdx()
 			reduceNode := msg.SendMapTask.GetNodeList()
 			storageNode.processMapTask(fileName, jobName, jobContent, dirName, jobId, idx, reduceNode)
+		case *messages.Wrapper_SendReduceTask:
+			//get map task
+			log.Println("get reduce task:", msg.SendReduceTask)
+			atomic.AddInt64(&storageNode.NumberOfRequests, 1)
+			fileName := msg.SendReduceTask.GetFileName()
+			jobName := msg.SendReduceTask.GetJobName()
+			jobContent := msg.SendReduceTask.GetJobContent()
+			dirName := msg.SendReduceTask.GetDirName()
+			jobId := msg.SendReduceTask.GetJobId()
+			storageNode.processReduceTask(fileName, jobName, jobContent, dirName, jobId)
 		case *messages.Wrapper_GetReplicaMessage:
 			log.Println("get replica msg:", msg.GetReplicaMessage)
 			//atomic update the number of requests
@@ -337,7 +366,7 @@ func (storageNode *StorageNode) processMapTask(fileName string, jobName string, 
 		filePath = filePath + "/" + dirName + "/" + curFileName
 	}
 	//base path
-	basePath := storageNode.SavePath + "/" + dirName + "/" + strconv.Itoa(int(jobId))
+	basePath := storageNode.SavePath + "/" + dirName + "/" + "map-" + strconv.Itoa(int(jobId))
 	os.MkdirAll(basePath, os.ModePerm)
 	//create temp job
 	jobFilePath := basePath + "/" + jobName
@@ -345,8 +374,9 @@ func (storageNode *StorageNode) processMapTask(fileName string, jobName string, 
 	if err != nil {
 		log.Fatalf("create job file fail %v \n", err)
 	}
-	file.Close() //close file
 	_, err = file.Write(jobContent)
+	file.Close() //close file
+
 	if err != nil {
 		log.Fatalf("write job content fail %v \n", err)
 	}
@@ -379,7 +409,90 @@ func (storageNode *StorageNode) processMapTask(fileName string, jobName string, 
 		m[node] = append(m[node], r)
 	}
 	//make message and send to reduce node
+	for node := range m {
+		resultData, err := json.Marshal(m[node])
+		if err != nil {
+			log.Printf("marshal data to json fail %v\n", err)
+		}
+		result := &messages.SendMapResult{
+			FileName: fileName,
+			DirName:  dirName,
+			ChunkIdx: idx,
+			JobId:    jobId,
+			Data:     resultData,
+		}
 
+		SendMapResult(node, result)
+	}
+	//delete temp file in local
+	err = os.RemoveAll(basePath)
+	if err != nil {
+		log.Println("remove temp dir fail: ", err)
+	}
+	// notify controller
+	address := computeAddress(storageNode.controllerHost, storageNode.controllerPort)
+	conn, err := net.Dial("tcp", address) // connect to controller
+	if err != nil {
+		log.Println("notify controller fail " + err.Error())
+	}
+	msgHandler := messages.NewMessageHandler(conn)
+	notify := &messages.NotifyMapFinish{
+		JobId:   jobId,
+		ChunkId: idx,
+		NodeId:  storageNode.Id,
+	}
+	wrapper := &messages.Wrapper{
+		Msg: &messages.Wrapper_NotifyMapFinish{NotifyMapFinish: notify},
+	}
+	msgHandler.Send(wrapper)
+	log.Printf("node %d finish map process", storageNode.Id)
+}
+
+func SendMapResult(node *messages.StoreNode, result *messages.SendMapResult) {
+	conn, err := net.Dial("tcp", node.Ip+":"+strconv.Itoa(int(node.Port)))
+	if err != nil {
+		log.Println("send result to reduce node fail: " + err.Error())
+		return
+	}
+	msgHandler := messages.NewMessageHandler(conn)
+	wrapper := &messages.Wrapper{
+		Msg: &messages.Wrapper_SendMapResult{
+			SendMapResult: result,
+		},
+	}
+	msgHandler.Send(wrapper)
+}
+
+func (storageNode *StorageNode) processReduceTask(fileName, jobName string, jobContent []byte, dirName string, jobId uint32) {
+	if _, ok := storageNode.ReduceTask[jobId]; !ok {
+		storageNode.ReduceTask[jobId] = &ReduceTask{
+			mu:         sync.Mutex{},
+			jobName:    jobName,
+			jobContent: jobContent,
+			fileName:   fileName,
+			dirName:    dirName,
+			data:       make(map[int32]*[]Result),
+		}
+	} else {
+		//may be map send data before
+		storageNode.ReduceTask[jobId].jobName = jobName
+		storageNode.ReduceTask[jobId].jobContent = jobContent
+	}
+	//make work dir
+	basePath := storageNode.SavePath + "/" + dirName + "/" + "reduce-" + strconv.Itoa(int(jobId))
+	os.MkdirAll(basePath, os.ModePerm)
+	jobFilePath := basePath + "/" + jobName
+	storageNode.ReduceTask[jobId].jobFilePath = jobFilePath
+	storageNode.ReduceTask[jobId].basePath = basePath
+	file, err := os.OpenFile(jobFilePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
+	if err != nil {
+		log.Fatalf("create job file fail %v \n", err)
+	}
+	_, err = file.Write(jobContent)
+	file.Close() //close file
+	if err != nil {
+		log.Fatalf("write job content fail %v \n", err)
+	}
 }
 func main() {
 	// id, host, port, saved path

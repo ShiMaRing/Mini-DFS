@@ -351,7 +351,10 @@ func (client *Client) handleSubmitJob(message string) {
 	}
 	defer f.Close()
 	reduceCount, _ := strconv.ParseInt(params[2], 10, 32)
-	jobContent, _ := ioutil.ReadAll(f)
+	jobContent, err := ioutil.ReadAll(f)
+	if err != nil {
+		log.Fatalln("load job content fail", err)
+	}
 	subMitRequest := &messages.SubmitJobRequest{
 		ClientId:   client.id,
 		FileName:   params[4],

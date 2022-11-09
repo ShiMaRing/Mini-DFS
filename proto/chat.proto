@@ -34,6 +34,20 @@ message SendMapTask{
   uint32 jobId = 6;
   repeated StoreNode nodeList = 7; //reduce nodes
 }
+//Send the map Task
+message SendMapResult{
+  string fileName = 1;
+  string dirName = 2;
+  int32 chunkIdx = 3;
+  uint32 jobId = 4;
+  bytes data = 5;
+}
+
+message NotifyMapFinish{
+  uint32  jobId = 1;
+  int32  chunkId = 2;
+  int32  nodeId = 3;
+}
 
 
 message PutResponse {
@@ -144,6 +158,16 @@ message LsResponse {
 message SendMapResponse{
   map<int32, HeartBeat> dataMap = 1;
 }
+//jobName string, jobContent []byte, jobId uint32,
+//	reduceNodeSet map[*messages.StoreNode]struct{}, fileName string
+
+message SendReduceTask{
+  string jobName = 1;
+  bytes jobContent = 2;
+  uint32 jobId = 3;
+  string fileName = 4;
+  string dirName = 5;
+}
 
 
 message Wrapper {
@@ -170,5 +194,8 @@ message Wrapper {
     FileExist file_exist_message = 20;
     SubmitJobRequest submit_job_message = 21;
     SendMapTask  send_map_task = 22;
+    SendReduceTask send_reduce_task = 23;
+    SendMapResult send_map_result = 24;
+    NotifyMapFinish notify_map_finish = 25;
   }
 }
