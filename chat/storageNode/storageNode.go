@@ -40,7 +40,7 @@ type ReduceTask struct {
 	dirName     string
 	jobFilePath string
 	basePath    string
-	data        map[int32][]*Result //chunkId - chunk Data
+	data        map[int32][]*messages.Result //chunkId - chunk Data
 	//    dirname
 	//               |- reduce-id             //basePath
 	//                          |--            jobName
@@ -187,7 +187,7 @@ func (storageNode *StorageNode) receiveMsg(msgHandler *messages.MessageHandler) 
 			jobId := msg.StartReduce.GetJobId()
 			storageNode.doReduce(jobId)
 		case nil:
-			log.Println("Received an empty message, close connection")
+			/*log.Println("Received an empty message, close connection")*/
 		default:
 			log.Printf("Unexpected message type: %T", msg)
 		}
@@ -405,19 +405,20 @@ func (storageNode *StorageNode) processMapTask(fileName string, jobName string, 
 	f, _ := os.OpenFile(outputFilePath, os.O_RDONLY, os.ModePerm)
 	scanner := bufio.NewScanner(f)
 	//the data will be send
-	m := make(map[*messages.StoreNode][]*Result)
+	m := make(map[*messages.StoreNode][]*messages.Result)
 	for i := 0; i < len(reduceNode); i++ {
-		m[reduceNode[i]] = make([]*Result, 0)
+		m[reduceNode[i]] = make([]*messages.Result, 0)
 	}
 	//shuffle data
 	for scanner.Scan() {
 		bytes := scanner.Bytes()
-		r := &Result{}
+		r := &messages.Result{}
 		_ = json.Unmarshal(bytes, r)
 		u := string(r.Key)[0]
 		node := reduceNode[int(u)%len(reduceNode)]
 		m[node] = append(m[node], r)
 	}
+	f.Close()
 	//make message and send to reduce node
 	for node := range m {
 		resultData, err := json.Marshal(m[node])
@@ -431,9 +432,9 @@ func (storageNode *StorageNode) processMapTask(fileName string, jobName string, 
 			JobId:    jobId,
 			Data:     resultData,
 		}
-
 		SendMapResult(node, result)
 	}
+
 	//delete temp file in local
 	err = os.RemoveAll(basePath)
 	if err != nil {
@@ -477,7 +478,7 @@ func (storageNode *StorageNode) processReduceTask(fileName, jobName string, jobC
 	if _, ok := storageNode.ReduceTask[jobId]; !ok {
 		storageNode.ReduceTask[jobId] = &ReduceTask{
 			mu:   sync.Mutex{},
-			data: make(map[int32][]*Result),
+			data: make(map[int32][]*messages.Result),
 		}
 	}
 	//may be map send data before
@@ -507,13 +508,13 @@ func (storageNode *StorageNode) processMapResult(idx int32, jobId uint32, data [
 	if _, ok := storageNode.ReduceTask[jobId]; !ok {
 		storageNode.ReduceTask[jobId] = &ReduceTask{
 			mu:   sync.Mutex{},
-			data: make(map[int32][]*Result),
+			data: make(map[int32][]*messages.Result),
 		}
 	}
 	task := storageNode.ReduceTask[jobId]
 	task.mu.Lock()
 	defer task.mu.Unlock()
-	mapResult := make([]*Result, 0)
+	mapResult := make([]*messages.Result, 0)
 	err := json.Unmarshal(data, &mapResult)
 	if err != nil {
 		log.Println("convert data to result list fail ", err)
@@ -551,7 +552,7 @@ func (storageNode *StorageNode) doReduce(jobId uint32) {
 	}
 	writer := bufio.NewWriter(inputFile)
 	for s := range sortedMap {
-		inputData := &InputData{
+		inputData := &messages.InputData{
 			Key:   []byte(s),
 			Value: sortedMap[s],
 		}

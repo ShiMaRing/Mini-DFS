@@ -99,10 +99,6 @@ message ReplicaChunk{
   int32 check_index = 5;
   string dirName = 6;
 }
-message Result{
-  bytes key = 1;
-  bytes value = 2;
-}
 
 message FileNotExist {
   string file_name = 1;

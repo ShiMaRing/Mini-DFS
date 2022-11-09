@@ -336,7 +336,7 @@ func (client *Client) sendMsgToController(wrapper *messages.Wrapper) {
 
 //upload job to controller
 //format: submit jobPath reduceCount  filename  dirName
-//example: submit ./wordCount 2   hello.txt  data
+//example: submit ./wordCount  2   hello.txt  data
 func (client *Client) handleSubmitJob(message string) {
 	params := strings.Split(message, " ")
 	if len(params) != 5 {

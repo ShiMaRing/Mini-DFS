@@ -547,7 +547,6 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			c.handleLsRequest(dirName, msgHandler)
 		case *messages.Wrapper_NotifyMapFinish:
 			//notify finish map
-			fmt.Println(wrapper)
 			jobId := msg.NotifyMapFinish.GetJobId()
 			chunkId := msg.NotifyMapFinish.GetChunkId()
 			nodeId := msg.NotifyMapFinish.GetNodeId()
@@ -566,7 +565,6 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 				}
 			}
 		case *messages.Wrapper_NotifyReduceFinish:
-			fmt.Println(wrapper)
 			jobId := msg.NotifyReduceFinish.GetJobId()
 			dirName := msg.NotifyReduceFinish.GetDirName()
 			fileName := msg.NotifyReduceFinish.GetFileName()

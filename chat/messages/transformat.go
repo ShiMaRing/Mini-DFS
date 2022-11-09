@@ -1,4 +1,4 @@
-package main
+package messages
 
 // Result map and reduce outPut data
 type Result struct {

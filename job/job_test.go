@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -22,6 +23,20 @@ func TestJob(t *testing.T) {
 	err = json.Unmarshal(all, result)
 	fmt.Println(string(result.Key))
 	fmt.Println(string(result.Value))
+
+}
+
+func TestCountJob(t *testing.T) {
+	f, _ := os.Open("test.txt-result")
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		text := scanner.Text()
+		split := strings.Split(text, " ")
+		key := split[0]
+		data := []byte(split[1])
+		u := binary.LittleEndian.Uint32(data)
+		fmt.Println(key, u)
+	}
 
 }
 
