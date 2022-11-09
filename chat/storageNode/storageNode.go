@@ -2,12 +2,15 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"mp/chat/messages"
 	"net"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -118,6 +121,18 @@ func (storageNode *StorageNode) receiveMsg(msgHandler *messages.MessageHandler) 
 			chunkIndex := msg.ReplicaChunkMessage.GetCheckIndex()
 			dirname := msg.ReplicaChunkMessage.GetDirName()
 			storageNode.processReplicaChunk(index, nodeList, chunkContents, fileName, chunkIndex, dirname)
+		case *messages.Wrapper_SendMapTask:
+			//get map task
+			log.Println("get map task:", msg.SendMapTask)
+			atomic.AddInt64(&storageNode.NumberOfRequests, 1)
+			fileName := msg.SendMapTask.GetFileName()
+			jobName := msg.SendMapTask.GetJobName()
+			jobContent := msg.SendMapTask.GetJobContent()
+			dirName := msg.SendMapTask.GetDirName()
+			jobId := msg.SendMapTask.GetJobId()
+			idx := msg.SendMapTask.GetChunkIdx()
+			reduceNode := msg.SendMapTask.GetNodeList()
+			storageNode.processMapTask(fileName, jobName, jobContent, dirName, jobId, idx, reduceNode)
 		case *messages.Wrapper_GetReplicaMessage:
 			log.Println("get replica msg:", msg.GetReplicaMessage)
 			//atomic update the number of requests
@@ -134,7 +149,6 @@ func (storageNode *StorageNode) receiveMsg(msgHandler *messages.MessageHandler) 
 			storageNode.processDeleteReplica(fileName, dirName, chunkIndexList)
 		case nil:
 			log.Println("Received an empty message, close connection")
-			quit = true
 		default:
 			log.Printf("Unexpected message type: %T", msg)
 		}
@@ -249,7 +263,7 @@ func (storageNode *StorageNode) processGetReplica(dirName string, fileName strin
 	if len(dirName) == 0 {
 		filePath = filePath + "/" + curFileName
 	} else {
-		filePath = filePath + dirName + "/" + curFileName
+		filePath = filePath + "/" + dirName + "/" + curFileName
 	}
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -309,6 +323,64 @@ func (storageNode *StorageNode) processDeleteReplica(fileName string, dirName st
 		atomic.AddInt64(&storageNode.FreeSpace, size)
 	}
 }
+
+//processMapTask create map output
+func (storageNode *StorageNode) processMapTask(fileName string, jobName string, jobContent []byte, dirName string,
+	jobId uint32, idx int32, reduceNode []*messages.StoreNode) {
+
+	curFileName := fileName + "-chunk-" + strconv.Itoa(int(idx))
+	//chunk file path
+	filePath := storageNode.SavePath
+	if len(dirName) == 0 {
+		filePath = filePath + "/" + curFileName
+	} else {
+		filePath = filePath + "/" + dirName + "/" + curFileName
+	}
+	//base path
+	basePath := storageNode.SavePath + "/" + dirName + "/" + strconv.Itoa(int(jobId))
+	os.MkdirAll(basePath, os.ModePerm)
+	//create temp job
+	jobFilePath := basePath + "/" + jobName
+	file, err := os.OpenFile(jobFilePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
+	if err != nil {
+		log.Fatalf("create job file fail %v \n", err)
+	}
+	file.Close() //close file
+	_, err = file.Write(jobContent)
+	if err != nil {
+		log.Fatalf("write job content fail %v \n", err)
+	}
+	outputFilePath := basePath + "/" + fileName + "-map" //get output filePath
+	absFilePath, _ := filepath.Abs(filePath)
+	absOutPutPath, _ := filepath.Abs(outputFilePath)
+	command := exec.Command(jobFilePath, "map", absFilePath, absOutPutPath)
+	err = command.Run()
+	//do map func
+	if err != nil {
+		log.Fatalf("do job %d fail with %v", jobId, err)
+	}
+	//finish map task
+	//read data,shuffle data,and send to reducer
+	//reducer will accept and store it unless master send message to process
+	f, _ := os.OpenFile(outputFilePath, os.O_RDONLY, os.ModePerm)
+	scanner := bufio.NewScanner(f)
+	//the data will be send
+	m := make(map[*messages.StoreNode][]*Result)
+	for i := 0; i < len(reduceNode); i++ {
+		m[reduceNode[i]] = make([]*Result, 0)
+	}
+	//shuffle data
+	for scanner.Scan() {
+		bytes := scanner.Bytes()
+		r := &Result{}
+		_ = json.Unmarshal(bytes, r)
+		u := string(r.Key)[0]
+		node := reduceNode[int(u)%len(reduceNode)]
+		m[node] = append(m[node], r)
+	}
+	//make message and send to reduce node
+
+}
 func main() {
 	// id, host, port, saved path
 	i, _ := strconv.ParseInt(os.Args[1], 10, 32)
@@ -318,6 +390,6 @@ func main() {
 	port := int32(p)
 	path := os.Args[4]
 
-	NewStorageNode(id, host, port, "orion01", 22000, path, 1024*1024, 0)
+	NewStorageNode(id, host, port, "localhost", 22000, path, 1024*1024, 0)
 	time.Sleep(1000 * time.Second)
 }

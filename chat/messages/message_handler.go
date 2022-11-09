@@ -15,7 +15,6 @@ func NewMessageHandler(conn net.Conn) *MessageHandler {
 	m := &MessageHandler{
 		conn: conn,
 	}
-
 	return m
 }
 

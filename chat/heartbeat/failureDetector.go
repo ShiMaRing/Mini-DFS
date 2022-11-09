@@ -1,7 +1,6 @@
 package heartbeat
 
 import (
-	"fmt"
 	"github.com/robfig/cron/v3"
 	"log"
 	"mp/chat/node_info"
@@ -23,7 +22,7 @@ func newFailureDetector(timeoutMills int64) *FailureDetector {
 func (failureDetector *FailureDetector) ScheduledCheck() {
 	crontab := cron.New(cron.WithSeconds())
 	task := func() {
-		fmt.Println("Start scheduled detector !")
+		//fmt.Println("Start scheduled detector !")
 		failureDetector.heartbeatCheck()
 	}
 	spec := "*/5 * * * * ?"
@@ -59,16 +58,14 @@ func (failureDetector *FailureDetector) markDown(nodeId int32) {
 }
 
 func (failureDetector *FailureDetector) markUp(nodeId int32, nodeInfo node_info.NodeInfo) {
-	log.Println("***** mark up :", nodeId)
-
+	//log.Println("***** mark up :", nodeId)
 	failureDetector.HeartbeatMap.Store(nodeId, nodeInfo)
-	log.Println("!!!!!!!!! after mark up:")
+	//log.Println("!!!!!!!!! after mark up:")
 	failureDetector.UserMap.Store(nodeId, &node_info.Node{Id: nodeId, Host: nodeInfo.Host, Port: nodeInfo.Port})
-
 	i := 0
 	failureDetector.HeartbeatMap.Range(func(key, value interface{}) bool {
 		i++
 		return true
 	})
-	log.Println("!!!!!!!!! map size: ", i)
+	//log.Println("!!!!!!!!! map size: ", i)
 }

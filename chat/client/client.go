@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/emirpasic/gods/lists/arraylist"
+	"io/ioutil"
 	"log"
 	"math"
 	"mp/chat/messages"
@@ -15,8 +16,8 @@ import (
 	"sync"
 )
 
-const controllerAddress = "orion01:22000"
-const path = "/bigdata/lliu78/storage/"
+const controllerAddress = "localhost:22000"
+const path = "./bigdata/lliu78/storage/"
 
 type Client struct {
 	id       int32
@@ -333,6 +334,41 @@ func (client *Client) sendMsgToController(wrapper *messages.Wrapper) {
 	client.receiveMsg(msgHandler)
 }
 
+//upload job to controller
+//format: submit jobPath reduceCount  filename  dirName
+//example: submit ./wordCount 2   hello.txt  data
+func (client *Client) handleSubmitJob(message string) {
+	params := strings.Split(message, " ")
+	if len(params) != 5 {
+		log.Fatalln("wrong params num")
+	}
+	jobPath := params[1]
+	jobPathSplit := strings.Split(jobPath, "/")
+	jobName := jobPathSplit[len(jobPathSplit)-1] //getJob Name
+	f, err := os.Open(jobPath)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer f.Close()
+	reduceCount, _ := strconv.ParseInt(params[2], 10, 32)
+	jobContent, _ := ioutil.ReadAll(f)
+	subMitRequest := &messages.SubmitJobRequest{
+		ClientId:   client.id,
+		FileName:   params[4],
+		ReduceNum:  int32(reduceCount),
+		DirName:    params[3],
+		JobContent: jobContent,
+		JobName:    jobName,
+	}
+	log.Printf("send submitJob,fileName is %s ,dirName is %s", params[4], params[3])
+	wrapper := &messages.Wrapper{
+		Msg: &messages.Wrapper_SubmitJobMessage{
+			SubmitJobMessage: subMitRequest,
+		},
+	}
+	client.sendMsgToController(wrapper)
+}
+
 func main() {
 	res, err := strconv.ParseInt(os.Args[1], 10, 32)
 	if err != nil {
@@ -385,6 +421,8 @@ func main() {
 					fileName = splits[1]
 				}
 				go client.handleDeleteRequest(fileName, filePath)
+			} else if strings.HasPrefix(message, "submit") {
+				go client.handleSubmitJob(message)
 			} else {
 				fmt.Println("Unknown command!")
 			}

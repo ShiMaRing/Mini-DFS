@@ -7,6 +7,7 @@ import (
 	"mp/chat/heartbeat"
 	"mp/chat/messages"
 	"mp/chat/node_info"
+	"sync/atomic"
 
 	"encoding/json"
 	"fmt"
@@ -27,14 +28,26 @@ type Controller struct {
 	failureDetector heartbeat.FailureDetector
 	fileTree        *fileTree2.FileTree
 	writer          *writeToFile.JsonWriter
+
+	jobId   uint32
+	taskMap map[string]*Task
 }
 
-const path = "/bigdata/lliu78/storage"
-const storagePath = "/bigdata/lliu78/storage/storage.json"
-const address = "orion01:22000"
+type Task struct {
+	jobId       uint32                         //auto increment
+	mu          sync.Mutex                     //avoid race
+	isFinish    bool                           //is finish
+	result      map[*messages.StoreNode]string //node and filePath to get result
+	mapNodes    map[*messages.StoreNode]int32
+	reduceNodes map[*messages.StoreNode]struct{}
+}
+
+const path = "./bigdata/lliu78/storage"
+const storagePath = "./bigdata/lliu78/storage/storage.json"
+const address = "localhost:22000"
 
 func NewController() *Controller {
-	c := Controller{fileTree: fileTree2.NewFileTree(path + "/")}
+	c := Controller{fileTree: fileTree2.NewFileTree(path + "/"), taskMap: make(map[string]*Task)}
 	if checkFileExist() {
 		c.readFile()
 	} else {
@@ -292,12 +305,43 @@ func (c *Controller) handleLsRequest(dirName string, msgHandler *messages.Messag
 	}
 }
 
+func (c *Controller) sendMapTask(dirName string, fileName string, job string, jobContent []byte,
+	mapNodes map[*messages.StoreNode]int32, jobId uint32, reduceNodeSet map[*messages.StoreNode]struct{}) {
+	for node := range mapNodes {
+		chunkNum := mapNodes[node]
+		conn, err := net.Dial("tcp", node.Ip+":"+strconv.Itoa(int(node.Port)))
+		if err != nil {
+			log.Fatalln(err.Error())
+			return
+		}
+		nodes := make([]*messages.StoreNode, 0)
+		for n := range reduceNodeSet {
+			nodes = append(nodes, n)
+		}
+		newMsgHandler := messages.NewMessageHandler(conn)
+		wrapper := &messages.Wrapper{
+			Msg: &messages.Wrapper_SendMapTask{
+				SendMapTask: &messages.SendMapTask{
+					FileName:   fileName,
+					DirName:    dirName,
+					ChunkIdx:   chunkNum,
+					JobContent: jobContent,
+					JobName:    job,
+					JobId:      jobId,
+					NodeList:   nodes,
+				},
+			},
+		}
+		newMsgHandler.Send(wrapper)
+	}
+}
+
 // Handle incoming requests.
 func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 	defer msgHandler.Close()
 	for {
 		wrapper, _ := msgHandler.Receive()
-		fmt.Println(wrapper)
+		//fmt.Println(wrapper)
 		switch msg := wrapper.Msg.(type) {
 		case *messages.Wrapper_HeartbeatMessage:
 			id := msg.HeartbeatMessage.GetId()
@@ -307,6 +351,7 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			numberOfRequests := msg.HeartbeatMessage.GetNumberOfRequests()
 			c.failureDetector.HeartbeatReceived(id, host, port, freeSpace, numberOfRequests)
 		case *messages.Wrapper_GetMapRequestMessage:
+			fmt.Println(wrapper)
 			//convert heartbeat map to map that can be sent
 			convertedMap := c.convertMap()
 			mapMsg := messages.SendMapResponse{DataMap: convertedMap}
@@ -320,6 +365,7 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 				log.Fatalln("Something went wrong")
 			}
 		case *messages.Wrapper_PutRequest:
+			fmt.Println(wrapper)
 			log.Println(msg.PutRequest)
 			fileName := msg.PutRequest.GetFileName()
 			dirName := msg.PutRequest.GetDirName()
@@ -336,7 +382,7 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 				msgHandler.Send(resp)
 				break
 			}
-			c.fileTree.AppendFile(path+dirName, fileName)
+			c.fileTree.AppendFile(path+"/"+dirName, fileName)
 			c.fileStatusMap.Store(wholeName, true)
 			// update storage map
 			c.fileStorageMap.Store(wholeName, &sync.Map{})
@@ -365,7 +411,95 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			if err != nil {
 				log.Fatalln("Something went wrong")
 			}
+		case *messages.Wrapper_SubmitJobMessage:
+			fmt.Println(wrapper.Msg)
+			dirName := msg.SubmitJobMessage.GetDirName()
+			fileName := msg.SubmitJobMessage.GetFileName()
+			wholeName := dirName + "/" + fileName
+			_, exist := c.fileStorageMap.Load(wholeName)
+			//if file does not exist
+			if !exist {
+				log.Println("file does not exists!")
+				resp := &messages.Wrapper{
+					Msg: &messages.Wrapper_FileNotExistMessage{
+						FileNotExistMessage: &messages.FileNotExist{
+							FileName: fileName,
+							ErrorMsg: "file does not exits",
+						},
+					},
+				}
+				msgHandler.Send(resp)
+				break
+			}
+			//get file info
+			f, _ := c.fileStorageMap.Load(wholeName)
+			fm, _ := f.(*sync.Map)
+			//fm store every chunk address ,pick different nodes
+			mapNodeSet := make(map[*messages.StoreNode]int32)
+			fm.Range(func(key, value any) bool {
+				chunkIdx := key.(int32)
+				info := value.(*messages.ChunkNodeInfo)
+				for i := range info.NodeList {
+					if _, ok := mapNodeSet[info.NodeList[i]]; !ok {
+						mapNodeSet[info.NodeList[i]] = chunkIdx
+						log.Printf("node %d map chunk %d", info.NodeList[i].Id, chunkIdx)
+						break
+					}
+				}
+				return true
+			})
+			//pick some reduce
+			//preferentially generated in the map node
+			//load balance
+			reduceNum := int(msg.SubmitJobMessage.GetReduceNum())
+			reduceNodeSet := make(map[*messages.StoreNode]struct{})
+			if reduceNum <= len(mapNodeSet) {
+				var i = 0
+				for node := range mapNodeSet {
+					if i == reduceNum {
+						break
+					}
+					reduceNodeSet[node] = struct{}{}
+					i++
+				}
+			} else {
+				for node := range mapNodeSet {
+					reduceNodeSet[node] = struct{}{}
+				}
+				//find rest userMap
+				var rest = reduceNum - len(mapNodeSet)
+				c.userMap.Range(func(key, value any) bool {
+					if rest == 0 {
+						return false
+					}
+					sn := value.(*node_info.Node)
+					for node := range reduceNodeSet {
+						if node.Id == sn.Id {
+							return true
+						}
+					}
+					node := &messages.StoreNode{Id: sn.Id, Ip: sn.Host, Port: sn.Port}
+					//add to reduce count
+					reduceNodeSet[node] = struct{}{}
+					rest--
+					return true
+				})
+			}
+			for node := range reduceNodeSet {
+				log.Printf("node %d is chosed to reduce ", node.Id)
+			}
+			jobContent := msg.SubmitJobMessage.GetJobContent() //generate job name and store the node info
+			jobName := msg.SubmitJobMessage.GetJobName()
+			clientId := msg.SubmitJobMessage.GetClientId() //client can get result via id and jobName
+			atomic.AddUint32(&c.jobId, 1)
+
+			key := strconv.Itoa(int(clientId)) + "-" + jobName //such as 1-count.exe
+			task := &Task{mapNodes: mapNodeSet, reduceNodes: reduceNodeSet, jobId: c.jobId}
+			c.taskMap[key] = task //add task
+			//send message to all map node
+			go c.sendMapTask(dirName, fileName, jobName, jobContent, mapNodeSet, c.jobId, reduceNodeSet)
 		case *messages.Wrapper_GetRequestMessage:
+			fmt.Println(wrapper)
 			// handleGetRequest
 			getRequest := msg.GetRequestMessage
 			id := getRequest.GetId()
@@ -373,6 +507,7 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			dirName := getRequest.GetDirName()
 			c.handleGetMsg(id, fileName, dirName, msgHandler)
 		case *messages.Wrapper_AckReplicaChunkMessage:
+			fmt.Println(wrapper)
 			ackMsg := msg.AckReplicaChunkMessage
 			replicaSuccess := ackMsg.GetReplicaSuccess()
 			fileName := ackMsg.GetFileName()
@@ -381,12 +516,14 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 				c.fileStatusMap.Store(fileName, false)
 			}
 		case *messages.Wrapper_DeleteRequestMessage:
+			fmt.Println(wrapper)
 			log.Println("deletion: ", msg.DeleteRequestMessage)
 			deleteMsg := msg.DeleteRequestMessage
 			fileName := deleteMsg.GetFileName()
 			filePath := deleteMsg.GetFilePath()
 			c.handleDeleteMsg(fileName, filePath, msgHandler)
 		case *messages.Wrapper_LsRequestMessage:
+			fmt.Println(wrapper)
 			dirName := msg.LsRequestMessage.GetDirName()
 			c.handleLsRequest(dirName, msgHandler)
 		case nil:
