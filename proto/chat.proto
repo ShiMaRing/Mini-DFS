@@ -48,6 +48,12 @@ message NotifyMapFinish{
   int32  chunkId = 2;
   int32  nodeId = 3;
 }
+message NotifyReduceFinish{
+  uint32  jobId = 1;
+  int32  nodeId = 2;
+  string dirName = 3;
+  string fileName = 4;
+}
 
 
 message PutResponse {
@@ -201,5 +207,6 @@ message Wrapper {
     SendMapResult send_map_result = 24;
     NotifyMapFinish notify_map_finish = 25;
     StartReduce start_reduce = 26;
+    NotifyReduceFinish notify_reduce_finish = 27;
   }
 }

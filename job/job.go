@@ -63,6 +63,9 @@ func main() {
 		line := 1
 		for scanner.Scan() {
 			data := scanner.Bytes()
+			if len(data) == 0 {
+				continue
+			}
 			line++
 			result := Map(line, data)
 			results = append(results, result)
@@ -72,6 +75,9 @@ func main() {
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			data := scanner.Bytes()
+			if len(data) == 0 {
+				continue
+			}
 			inputData := &InputData{}
 			err := json.Unmarshal(data, inputData)
 			if err != nil {
@@ -88,10 +94,21 @@ func main() {
 	}
 	defer outputFile.Close()
 	writer := bufio.NewWriter(outputFile)
-	for i := range results {
-		result := results[i]
-		resultJson, _ := json.Marshal(result)
-		writer.WriteString(string(resultJson) + "\n")
+	if op == "map" {
+		for i := range results {
+			result := results[i]
+			resultJson, _ := json.Marshal(result)
+			writer.WriteString(string(resultJson) + "\n")
+		}
+	} else {
+		for i := range results {
+			key := results[i].Key
+			value := results[i].Value
+			writer.Write(key)
+			writer.WriteString(" ")
+			writer.Write(value)
+			writer.WriteString("\n")
+		}
 	}
 	writer.Flush()
 }

@@ -182,7 +182,10 @@ func (storageNode *StorageNode) receiveMsg(msgHandler *messages.MessageHandler) 
 			idx := msg.SendMapResult.GetChunkIdx()
 			data := msg.SendMapResult.GetData()
 			storageNode.processMapResult(idx, jobId, data)
-
+		case *messages.Wrapper_StartReduce:
+			//receive map result
+			jobId := msg.StartReduce.GetJobId()
+			storageNode.doReduce(jobId)
 		case nil:
 			log.Println("Received an empty message, close connection")
 		default:
@@ -508,13 +511,77 @@ func (storageNode *StorageNode) processMapResult(idx int32, jobId uint32, data [
 		}
 	}
 	task := storageNode.ReduceTask[jobId]
+	task.mu.Lock()
+	defer task.mu.Unlock()
 	mapResult := make([]*Result, 0)
-	err := json.Unmarshal(data, mapResult)
+	err := json.Unmarshal(data, &mapResult)
 	if err != nil {
 		log.Println("convert data to result list fail ", err)
 	}
-	task.data[idx] = mapResult //the data of chunk to be reduced
+	//append not set , avoid same node do dup reduce
+	task.data[idx] = append(task.data[idx], mapResult...) //the data of chunk to be reduced
 }
+
+func (storageNode *StorageNode) doReduce(jobId uint32) {
+	//do reduce
+	task := storageNode.ReduceTask[jobId]
+	//sort all data
+	sortedMap := make(map[string][][]byte)
+	for _, resultList := range task.data {
+		for i := range resultList {
+			result := resultList[i]
+			keyString := string(result.Key)
+			if _, ok := sortedMap[keyString]; !ok {
+				sortedMap[keyString] = make([][]byte, 0)
+			}
+			sortedMap[keyString] = append(sortedMap[keyString], result.Value)
+		}
+	}
+	//make input data format
+	inputFileName := task.basePath + "/reduce-tmp"
+	outPutFileName := task.basePath + "/" + task.fileName + "-result"
+
+	inputFileName, _ = filepath.Abs(inputFileName)
+	outPutFileName, _ = filepath.Abs(outPutFileName)
+
+	inputFile, err := os.OpenFile(inputFileName, os.O_RDWR|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		log.Println("create tmp file to reduce fail")
+		return
+	}
+	writer := bufio.NewWriter(inputFile)
+	for s := range sortedMap {
+		inputData := &InputData{
+			Key:   []byte(s),
+			Value: sortedMap[s],
+		}
+		data, _ := json.Marshal(inputData)
+		writer.WriteString(string(data) + "\n")
+	}
+	writer.Flush()
+	inputFile.Close()
+	command := exec.Command(task.jobFilePath, "reduce", inputFileName, outPutFileName)
+	command.Run()
+	//finish reduce ,notify controller,dirName is dirname/reduce-id/result
+	os.Remove(inputFileName)
+
+	//notify master
+	notify := &messages.NotifyReduceFinish{
+		JobId:    jobId,
+		NodeId:   storageNode.Id,
+		DirName:  task.dirName + "/reduce-" + strconv.Itoa(int(jobId)),
+		FileName: task.fileName + "-result",
+	}
+	address := computeAddress(storageNode.controllerHost, storageNode.controllerPort)
+	conn, err := net.Dial("tcp", address)
+	msgHandler := messages.NewMessageHandler(conn)
+	wrapper := &messages.Wrapper{
+		Msg: &messages.Wrapper_NotifyReduceFinish{NotifyReduceFinish: notify},
+	}
+	msgHandler.Send(wrapper)
+	log.Printf("node %d finish reduce process", storageNode.Id)
+}
+
 func main() {
 	// id, host, port, saved path
 	i, _ := strconv.ParseInt(os.Args[1], 10, 32)

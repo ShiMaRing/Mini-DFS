@@ -547,6 +547,7 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			c.handleLsRequest(dirName, msgHandler)
 		case *messages.Wrapper_NotifyMapFinish:
 			//notify finish map
+			fmt.Println(wrapper)
 			jobId := msg.NotifyMapFinish.GetJobId()
 			chunkId := msg.NotifyMapFinish.GetChunkId()
 			nodeId := msg.NotifyMapFinish.GetNodeId()
@@ -556,6 +557,7 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			key := strconv.Itoa(int(nodeId)) + "-" + strconv.Itoa(int(chunkId))
 			delete(task.mapNodes, key)
 			task.mu.Unlock()
+			log.Printf("node %d finish map\n", nodeId)
 			if len(task.mapNodes) == 0 {
 				//provide jobId and notify reduce to start job
 				startMsg := &messages.StartReduce{JobId: jobId}
@@ -563,6 +565,31 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 					c.startReduce(startMsg, task.reduceNodes[i])
 				}
 			}
+		case *messages.Wrapper_NotifyReduceFinish:
+			fmt.Println(wrapper)
+			jobId := msg.NotifyReduceFinish.GetJobId()
+			dirName := msg.NotifyReduceFinish.GetDirName()
+			fileName := msg.NotifyReduceFinish.GetFileName()
+			nodeId := msg.NotifyReduceFinish.GetNodeId()
+			//search map for jobId
+			task := c.taskMap[jobId]
+			task.mu.Lock()
+			//findNode
+			var node *messages.StoreNode
+			for i := range task.reduceNodes {
+				if task.reduceNodes[i].Id == nodeId {
+					node = task.reduceNodes[i]
+					break
+				}
+			}
+			task.result = append(task.result, &ReduceResult{
+				dirName:  dirName,
+				fileName: fileName,
+				jobId:    jobId,
+				node:     node,
+			})
+			task.mu.Unlock()
+			log.Printf("node %d finish reduce\n", nodeId)
 		case nil:
 			log.Println("Received an empty message, terminating client")
 			return
