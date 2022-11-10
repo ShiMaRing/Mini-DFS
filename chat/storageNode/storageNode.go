@@ -143,7 +143,7 @@ func (storageNode *StorageNode) receiveMsg(msgHandler *messages.MessageHandler) 
 			storageNode.processReplicaChunk(index, nodeList, chunkContents, fileName, chunkIndex, dirname)
 		case *messages.Wrapper_SendMapTask:
 			//get map task
-			log.Println("get map task:", msg.SendMapTask)
+			log.Printf("get map task, id: %d  name:%s \n", msg.SendMapTask.JobId, msg.SendMapTask.JobName)
 			atomic.AddInt64(&storageNode.NumberOfRequests, 1)
 			fileName := msg.SendMapTask.GetFileName()
 			jobName := msg.SendMapTask.GetJobName()
@@ -155,7 +155,7 @@ func (storageNode *StorageNode) receiveMsg(msgHandler *messages.MessageHandler) 
 			storageNode.processMapTask(fileName, jobName, jobContent, dirName, jobId, idx, reduceNode)
 		case *messages.Wrapper_SendReduceTask:
 			//get map task
-			log.Println("get reduce task:", msg.SendReduceTask)
+			log.Printf("get reduce task, id: %d  name:%s\n", msg.SendReduceTask.JobId, msg.SendReduceTask.JobName)
 			atomic.AddInt64(&storageNode.NumberOfRequests, 1)
 			fileName := msg.SendReduceTask.GetFileName()
 			jobName := msg.SendReduceTask.GetJobName()
@@ -548,9 +548,9 @@ func (storageNode *StorageNode) doReduce(jobId uint32) {
 	inputFileName, _ = filepath.Abs(inputFileName)
 	outPutFileName, _ = filepath.Abs(outPutFileName)
 
-	inputFile, err := os.OpenFile(inputFileName, os.O_RDWR|os.O_CREATE, os.ModePerm)
+	inputFile, err := os.OpenFile(inputFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
-		log.Println("create tmp file to reduce fail")
+		log.Println("create tmp file to reduce fail:", err)
 		return
 	}
 	writer := bufio.NewWriter(inputFile)

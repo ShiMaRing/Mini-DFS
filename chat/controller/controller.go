@@ -105,7 +105,7 @@ func (c *Controller) readFile() {
 		if !ok {
 			c.fileStorageMap.Store(wholeName, &sync.Map{})
 			// update file tree
-			c.fileTree.AppendFile(path+filePath, fileName)
+			c.fileTree.AppendFile(path+"/"+filePath, fileName)
 			// update map
 			c.fileStatusMap.Store(wholeName, true)
 		}
@@ -425,9 +425,9 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 				log.Fatalln("Something went wrong")
 			}
 		case *messages.Wrapper_SubmitJobMessage:
-			fmt.Println(wrapper.Msg)
 			dirName := msg.SubmitJobMessage.GetDirName()
 			fileName := msg.SubmitJobMessage.GetFileName()
+			log.Printf("get a job , name :%s  filename:%s \n", msg.SubmitJobMessage.GetJobName(), fileName)
 			wholeName := dirName + "/" + fileName
 			_, exist := c.fileStorageMap.Load(wholeName)
 			//if file does not exist
@@ -600,7 +600,7 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			task.mu.Unlock()
 			log.Printf("node %d finish reduce\n", nodeId)
 		case nil:
-			log.Println("Received an empty message, terminating client")
+			/*log.Println("Received an empty message, terminating client")*/
 			return
 		default:
 			log.Printf("Unexpected message type: %T", msg)
@@ -695,14 +695,14 @@ func (c *Controller) handleJobInfoRequest(msgHandler *messages.MessageHandler, i
 				res := task.result[i]
 				results = append(results, &messages.JobResult{
 					FileName: res.fileName,
-					DirName:  res.fileName,
+					DirName:  res.dirName,
 					Node:     res.node,
 				})
 			}
 			msgHandler.Send(&messages.Wrapper{
 				Msg: &messages.Wrapper_NotifyClientResult{
 					NotifyClientResult: &messages.NotifyClientResult{
-						Status:        "running",
+						Status:        "finish",
 						JobResultList: results},
 				}})
 		}

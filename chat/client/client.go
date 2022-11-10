@@ -175,7 +175,7 @@ func (client *Client) receiveMsg(msgHandler *messages.MessageHandler) {
 		case *messages.Wrapper_FileNotExistMessage:
 			fmt.Printf("file [%s] not exist\n", msg.FileNotExistMessage.FileName)
 		case *messages.Wrapper_FileExistMessage:
-			fmt.Printf("file [%s] already exists, please update a new file\n", msg.FileExistMessage.GetFilename())
+			log.Printf("file [%s] already exists, please update a new file\n", msg.FileExistMessage.GetFilename())
 		case *messages.Wrapper_NotifyClientResult:
 			result := msg.NotifyClientResult
 			status := result.GetStatus()
@@ -184,10 +184,10 @@ func (client *Client) receiveMsg(msgHandler *messages.MessageHandler) {
 			} else if status == "finish" {
 				list := result.GetJobResultList()
 				fmt.Println("your job is finish ,the position of result is :")
-				fmt.Printf("%5s %10s %10s  %15s %15s ", "id", "ip", "port", "dirName", "fileName")
+				log.Printf("%5s %10s %10s  %15s %15s \n ", "id", "ip", "port", "dirName", "fileName")
 				for i := range list {
 					info := list[i]
-					fmt.Printf("%5d %10s %10d  %15s %15s ", info.GetNode().Id, info.GetNode().Ip, info.GetNode().Port, info.GetDirName(), info.GetFileName())
+					log.Printf("%5d %10s %10d  %15s %15s \n", info.GetNode().Id, info.GetNode().Ip, info.GetNode().Port, info.GetDirName(), info.GetFileName())
 				}
 			} else {
 				fmt.Println("wrong job id")
@@ -252,7 +252,7 @@ func splitFile(path string) *arraylist.List {
 	}
 	// calculate total number of parts the file will be chunked into
 	totalPartsNum := uint64(math.Ceil(float64(fileSize) / float64(fileChunk)))
-	fmt.Printf("Splitting to %d pieces.\n", totalPartsNum)
+	log.Printf("Splitting to %d pieces.\n", totalPartsNum)
 	for i := uint64(0); i < totalPartsNum; i++ {
 		partSize := int(math.Min(float64(fileChunk), float64(fileSize-int64(i*uint64(fileChunk)))))
 		partBuffer := make([]byte, partSize)
@@ -354,7 +354,7 @@ func (client *Client) sendMsgToController(wrapper *messages.Wrapper) {
 
 //upload job to controller
 //format: submit jobPath reduceCount  filename  dirName
-//example: submit ./wordCount  2   hello.txt  data
+
 func (client *Client) handleSubmitJob(message string) {
 	params := strings.Split(message, " ")
 	if len(params) != 5 {
@@ -463,6 +463,7 @@ func main() {
 				}
 				go client.handleDeleteRequest(fileName, filePath)
 			} else if strings.HasPrefix(message, "submit") {
+				//example: submit ./wordCount  2    data hello.txt
 				go client.handleSubmitJob(message)
 			} else if strings.HasPrefix(message, "job") {
 				go client.handleGetJobInfo(message)
