@@ -117,6 +117,7 @@ func (storageNode *StorageNode) StartHeartBeat() {
 					},
 				}
 				msgHandler.Send(wrapper)
+				msgHandler.Close()
 				log.Println("send heart beat")
 			}
 		}
@@ -447,6 +448,7 @@ func (storageNode *StorageNode) processMapTask(fileName string, jobName string, 
 		log.Println("notify controller fail " + err.Error())
 	}
 	msgHandler := messages.NewMessageHandler(conn)
+	defer msgHandler.Close()
 	notify := &messages.NotifyMapFinish{
 		JobId:   jobId,
 		ChunkId: idx,
@@ -466,6 +468,7 @@ func SendMapResult(node *messages.StoreNode, result *messages.SendMapResult) {
 		return
 	}
 	msgHandler := messages.NewMessageHandler(conn)
+	defer msgHandler.Close()
 	wrapper := &messages.Wrapper{
 		Msg: &messages.Wrapper_SendMapResult{
 			SendMapResult: result,
@@ -576,6 +579,7 @@ func (storageNode *StorageNode) doReduce(jobId uint32) {
 	address := computeAddress(storageNode.controllerHost, storageNode.controllerPort)
 	conn, err := net.Dial("tcp", address)
 	msgHandler := messages.NewMessageHandler(conn)
+	defer msgHandler.Close()
 	wrapper := &messages.Wrapper{
 		Msg: &messages.Wrapper_NotifyReduceFinish{NotifyReduceFinish: notify},
 	}

@@ -255,6 +255,7 @@ func (c *Controller) handleDeleteMsg(fileName string, filePath string, msgHandle
 		}
 		newMsgHandler := messages.NewMessageHandler(conn)
 		newMsgHandler.Send(resp)
+		msgHandler.Close()
 	}
 	// delete from storage map
 	c.fileStorageMap.Delete(wholeName)
@@ -340,6 +341,7 @@ func (c *Controller) sendMapTask(dirName string, fileName string, job string, jo
 			},
 		}
 		newMsgHandler.Send(wrapper)
+		newMsgHandler.Close()
 	}
 }
 
@@ -611,6 +613,7 @@ func (c *Controller) startReduce(msg *messages.StartReduce, node *messages.Store
 		},
 	}
 	msgHandler.Send(wrapper)
+	msgHandler.Close()
 }
 
 // A helper function converts the heartbeat msg to a getMap response.
