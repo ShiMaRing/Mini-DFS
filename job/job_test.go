@@ -9,12 +9,11 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"strings"
 	"testing"
 )
 
 func TestJob(t *testing.T) {
-	f, _ := os.Open("test.txt")
+	f, _ := os.Open("test-out")
 	all, err := ioutil.ReadAll(f)
 	if err != nil {
 		log.Fatalln(err)
@@ -27,15 +26,16 @@ func TestJob(t *testing.T) {
 }
 
 func TestCountJob(t *testing.T) {
-	f, _ := os.Open("test.txt-result")
+	f, _ := os.Open("test-out")
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		text := scanner.Text()
-		split := strings.Split(text, " ")
-		key := split[0]
-		data := []byte(split[1])
-		u := binary.LittleEndian.Uint32(data)
-		fmt.Println(key, u)
+		data := scanner.Bytes()
+		result := &Result{}
+		err := json.Unmarshal(data, result)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		fmt.Println(string(result.Key), string(result.Value))
 	}
 
 }

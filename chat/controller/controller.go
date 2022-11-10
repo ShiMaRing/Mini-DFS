@@ -30,10 +30,11 @@ type Controller struct {
 	writer          *writeToFile.JsonWriter
 
 	jobId   uint32
-	taskMap map[uint32]*Task //jobId - clientId
+	taskMap map[uint32]*Task //jobId
 }
 
 type Task struct {
+	isFinish bool       //true when finish
 	jobId    uint32     //auto increment
 	mu       sync.Mutex //avoid race
 	fileName string     //filename
@@ -318,30 +319,33 @@ func (c *Controller) handleLsRequest(dirName string, msgHandler *messages.Messag
 }
 
 func (c *Controller) sendMapTask(dirName string, fileName string, job string, jobContent []byte,
-	mapNodes map[*messages.StoreNode]int32, jobId uint32, reduceNodes []*messages.StoreNode) {
+	mapNodes map[*messages.StoreNode][]int32, jobId uint32, reduceNodes []*messages.StoreNode) {
 	for node := range mapNodes {
-		chunkNum := mapNodes[node]
-		conn, err := net.Dial("tcp", node.Ip+":"+strconv.Itoa(int(node.Port)))
-		if err != nil {
-			log.Fatalln(err.Error())
-			return
-		}
-		newMsgHandler := messages.NewMessageHandler(conn)
-		wrapper := &messages.Wrapper{
-			Msg: &messages.Wrapper_SendMapTask{
-				SendMapTask: &messages.SendMapTask{
-					FileName:   fileName,
-					DirName:    dirName,
-					ChunkIdx:   chunkNum,
-					JobContent: jobContent,
-					JobName:    job,
-					JobId:      jobId,
-					NodeList:   reduceNodes, //in same order
+		chunkNums := mapNodes[node]
+		for i := range chunkNums {
+			chunkNum := chunkNums[i]
+			conn, err := net.Dial("tcp", node.Ip+":"+strconv.Itoa(int(node.Port)))
+			if err != nil {
+				log.Fatalln(err.Error())
+				return
+			}
+			newMsgHandler := messages.NewMessageHandler(conn)
+			wrapper := &messages.Wrapper{
+				Msg: &messages.Wrapper_SendMapTask{
+					SendMapTask: &messages.SendMapTask{
+						FileName:   fileName,
+						DirName:    dirName,
+						ChunkIdx:   chunkNum,
+						JobContent: jobContent,
+						JobName:    job,
+						JobId:      jobId,
+						NodeList:   reduceNodes, //in same order
+					},
 				},
-			},
+			}
+			newMsgHandler.Send(wrapper)
+			newMsgHandler.Close()
 		}
-		newMsgHandler.Send(wrapper)
-		newMsgHandler.Close()
 	}
 }
 
@@ -444,17 +448,13 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			f, _ := c.fileStorageMap.Load(wholeName)
 			fm, _ := f.(*sync.Map)
 			//fm store every chunk address ,pick different nodes
-			mapNodeSet := make(map[*messages.StoreNode]int32)
+			mapNodeSet := make(map[*messages.StoreNode][]int32)
 			fm.Range(func(key, value any) bool {
 				chunkIdx := key.(int32)
 				info := value.(*messages.ChunkNodeInfo)
-				for i := range info.NodeList {
-					if _, ok := mapNodeSet[info.NodeList[i]]; !ok {
-						mapNodeSet[info.NodeList[i]] = chunkIdx
-						log.Printf("node %d map chunk %d", info.NodeList[i].Id, chunkIdx)
-						break
-					}
-				}
+				i := rand.Intn(len(info.NodeList)) //rand choose node to process map func
+				mapNodeSet[info.NodeList[i]] = append(mapNodeSet[info.NodeList[i]], chunkIdx)
+				log.Printf("node %d map chunk %d", info.NodeList[i].Id, chunkIdx)
 				return true
 			})
 			//pick some reduce
@@ -501,21 +501,23 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			jobName := msg.SubmitJobMessage.GetJobName()
 			clientId := msg.SubmitJobMessage.GetClientId() //client can get result via id and jobName
 			atomic.AddUint32(&c.jobId, 1)
-
 			task := &Task{jobId: c.jobId}
 			task.fileName = fileName
 			task.dirName = dirName
 			task.mapNodes = make(map[string]*messages.StoreNode)
 			task.clientId = clientId
 			for node, chunkIdx := range mapNodeSet {
-				key := strconv.Itoa(int(node.Id)) + "-" + strconv.Itoa(int(chunkIdx))
-				task.mapNodes[key] = node
+				for i := range chunkIdx {
+					key := strconv.Itoa(int(node.Id)) + "-" + strconv.Itoa(int(chunkIdx[i]))
+					task.mapNodes[key] = node
+				}
 			}
 			for node := range reduceNodeSet {
 				task.reduceNodes = append(task.reduceNodes, node)
 			}
 			c.taskMap[c.jobId] = task //add task
 			//send message to all map node
+			go c.sendJobInfoToClient(msgHandler)
 			go c.sendReduceTask(jobName, jobContent, c.jobId, task.reduceNodes, fileName, dirName)
 			go c.sendMapTask(dirName, fileName, jobName, jobContent, mapNodeSet, c.jobId, task.reduceNodes)
 
@@ -547,6 +549,10 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 			fmt.Println(wrapper)
 			dirName := msg.LsRequestMessage.GetDirName()
 			c.handleLsRequest(dirName, msgHandler)
+		case *messages.Wrapper_JobInfo:
+			//client want to look for job status
+			id := msg.JobInfo.GetJobId()
+			c.handleJobInfoRequest(msgHandler, id)
 		case *messages.Wrapper_NotifyMapFinish:
 			//notify finish map
 			jobId := msg.NotifyMapFinish.GetJobId()
@@ -588,6 +594,9 @@ func (c *Controller) handleClient(msgHandler *messages.MessageHandler) {
 				jobId:    jobId,
 				node:     node,
 			})
+			if len(task.result) == len(task.reduceNodes) {
+				task.isFinish = true
+			}
 			task.mu.Unlock()
 			log.Printf("node %d finish reduce\n", nodeId)
 		case nil:
@@ -652,6 +661,51 @@ func (c *Controller) sendReduceTask(jobName string, jobContent []byte, jobId uin
 			},
 		}
 		newMsgHandler.Send(wrapper)
+	}
+}
+
+func (c *Controller) sendJobInfoToClient(handler *messages.MessageHandler) {
+	jobInfo := &messages.JobInfo{
+		JobId: c.jobId,
+	}
+	info := &messages.Wrapper_JobInfo{JobInfo: jobInfo}
+	wrapper := &messages.Wrapper{Msg: info}
+	handler.Send(wrapper)
+}
+
+func (c *Controller) handleJobInfoRequest(msgHandler *messages.MessageHandler, id uint32) {
+	if task, ok := c.taskMap[id]; !ok {
+		msgHandler.Send(&messages.Wrapper{
+			Msg: &messages.Wrapper_NotifyClientResult{
+				NotifyClientResult: &messages.NotifyClientResult{
+					Status:        "wrong",
+					JobResultList: nil},
+			}})
+	} else {
+		if !task.isFinish {
+			msgHandler.Send(&messages.Wrapper{
+				Msg: &messages.Wrapper_NotifyClientResult{
+					NotifyClientResult: &messages.NotifyClientResult{
+						Status:        "running",
+						JobResultList: nil},
+				}})
+		} else {
+			results := make([]*messages.JobResult, 0)
+			for i := range task.result {
+				res := task.result[i]
+				results = append(results, &messages.JobResult{
+					FileName: res.fileName,
+					DirName:  res.fileName,
+					Node:     res.node,
+				})
+			}
+			msgHandler.Send(&messages.Wrapper{
+				Msg: &messages.Wrapper_NotifyClientResult{
+					NotifyClientResult: &messages.NotifyClientResult{
+						Status:        "running",
+						JobResultList: results},
+				}})
+		}
 	}
 }
 

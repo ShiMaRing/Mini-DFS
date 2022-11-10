@@ -157,6 +157,22 @@ message LsResponse {
   string response = 1;
 }
 
+message JobInfo{
+  uint32 jobId = 1;
+  int32 clientId = 2;
+}
+
+message NotifyClientResult{
+  string status = 1;    //job status
+  repeated JobResult jobResultList = 2;
+}
+
+message JobResult{
+  string fileName = 1;
+  string dirName = 2;
+  StoreNode node = 3;
+}
+
 message SendMapResponse{
   map<int32, HeartBeat> dataMap = 1;
 }
@@ -204,5 +220,7 @@ message Wrapper {
     NotifyMapFinish notify_map_finish = 25;
     StartReduce start_reduce = 26;
     NotifyReduceFinish notify_reduce_finish = 27;
+    JobInfo job_info = 28;
+    NotifyClientResult notify_client_result = 29;
   }
 }

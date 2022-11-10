@@ -1631,6 +1631,179 @@ func (x *LsResponse) GetResponse() string {
 	return ""
 }
 
+type JobInfo struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	JobId    uint32 `protobuf:"varint,1,opt,name=jobId,proto3" json:"jobId,omitempty"`
+	ClientId int32  `protobuf:"varint,2,opt,name=clientId,proto3" json:"clientId,omitempty"`
+}
+
+func (x *JobInfo) Reset() {
+	*x = JobInfo{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_chat_proto_msgTypes[25]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *JobInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JobInfo) ProtoMessage() {}
+
+func (x *JobInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_proto_msgTypes[25]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JobInfo.ProtoReflect.Descriptor instead.
+func (*JobInfo) Descriptor() ([]byte, []int) {
+	return file_chat_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *JobInfo) GetJobId() uint32 {
+	if x != nil {
+		return x.JobId
+	}
+	return 0
+}
+
+func (x *JobInfo) GetClientId() int32 {
+	if x != nil {
+		return x.ClientId
+	}
+	return 0
+}
+
+type NotifyClientResult struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Status        string       `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"` //job status
+	JobResultList []*JobResult `protobuf:"bytes,2,rep,name=jobResultList,proto3" json:"jobResultList,omitempty"`
+}
+
+func (x *NotifyClientResult) Reset() {
+	*x = NotifyClientResult{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_chat_proto_msgTypes[26]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *NotifyClientResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NotifyClientResult) ProtoMessage() {}
+
+func (x *NotifyClientResult) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_proto_msgTypes[26]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NotifyClientResult.ProtoReflect.Descriptor instead.
+func (*NotifyClientResult) Descriptor() ([]byte, []int) {
+	return file_chat_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *NotifyClientResult) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *NotifyClientResult) GetJobResultList() []*JobResult {
+	if x != nil {
+		return x.JobResultList
+	}
+	return nil
+}
+
+type JobResult struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	FileName string     `protobuf:"bytes,1,opt,name=fileName,proto3" json:"fileName,omitempty"`
+	DirName  string     `protobuf:"bytes,2,opt,name=dirName,proto3" json:"dirName,omitempty"`
+	Node     *StoreNode `protobuf:"bytes,3,opt,name=node,proto3" json:"node,omitempty"`
+}
+
+func (x *JobResult) Reset() {
+	*x = JobResult{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_chat_proto_msgTypes[27]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *JobResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JobResult) ProtoMessage() {}
+
+func (x *JobResult) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_proto_msgTypes[27]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JobResult.ProtoReflect.Descriptor instead.
+func (*JobResult) Descriptor() ([]byte, []int) {
+	return file_chat_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *JobResult) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+func (x *JobResult) GetDirName() string {
+	if x != nil {
+		return x.DirName
+	}
+	return ""
+}
+
+func (x *JobResult) GetNode() *StoreNode {
+	if x != nil {
+		return x.Node
+	}
+	return nil
+}
+
 type SendMapResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1642,7 +1815,7 @@ type SendMapResponse struct {
 func (x *SendMapResponse) Reset() {
 	*x = SendMapResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_chat_proto_msgTypes[25]
+		mi := &file_chat_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1655,7 +1828,7 @@ func (x *SendMapResponse) String() string {
 func (*SendMapResponse) ProtoMessage() {}
 
 func (x *SendMapResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_proto_msgTypes[25]
+	mi := &file_chat_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1668,7 +1841,7 @@ func (x *SendMapResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMapResponse.ProtoReflect.Descriptor instead.
 func (*SendMapResponse) Descriptor() ([]byte, []int) {
-	return file_chat_proto_rawDescGZIP(), []int{25}
+	return file_chat_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *SendMapResponse) GetDataMap() map[int32]*HeartBeat {
@@ -1693,7 +1866,7 @@ type SendReduceTask struct {
 func (x *SendReduceTask) Reset() {
 	*x = SendReduceTask{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_chat_proto_msgTypes[26]
+		mi := &file_chat_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1706,7 +1879,7 @@ func (x *SendReduceTask) String() string {
 func (*SendReduceTask) ProtoMessage() {}
 
 func (x *SendReduceTask) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_proto_msgTypes[26]
+	mi := &file_chat_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1719,7 +1892,7 @@ func (x *SendReduceTask) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendReduceTask.ProtoReflect.Descriptor instead.
 func (*SendReduceTask) Descriptor() ([]byte, []int) {
-	return file_chat_proto_rawDescGZIP(), []int{26}
+	return file_chat_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *SendReduceTask) GetJobName() string {
@@ -1768,7 +1941,7 @@ type StartReduce struct {
 func (x *StartReduce) Reset() {
 	*x = StartReduce{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_chat_proto_msgTypes[27]
+		mi := &file_chat_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1781,7 +1954,7 @@ func (x *StartReduce) String() string {
 func (*StartReduce) ProtoMessage() {}
 
 func (x *StartReduce) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_proto_msgTypes[27]
+	mi := &file_chat_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1794,7 +1967,7 @@ func (x *StartReduce) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartReduce.ProtoReflect.Descriptor instead.
 func (*StartReduce) Descriptor() ([]byte, []int) {
-	return file_chat_proto_rawDescGZIP(), []int{27}
+	return file_chat_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *StartReduce) GetJobId() uint32 {
@@ -1837,13 +2010,15 @@ type Wrapper struct {
 	//	*Wrapper_NotifyMapFinish
 	//	*Wrapper_StartReduce
 	//	*Wrapper_NotifyReduceFinish
+	//	*Wrapper_JobInfo
+	//	*Wrapper_NotifyClientResult
 	Msg isWrapper_Msg `protobuf_oneof:"msg"`
 }
 
 func (x *Wrapper) Reset() {
 	*x = Wrapper{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_chat_proto_msgTypes[28]
+		mi := &file_chat_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1856,7 +2031,7 @@ func (x *Wrapper) String() string {
 func (*Wrapper) ProtoMessage() {}
 
 func (x *Wrapper) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_proto_msgTypes[28]
+	mi := &file_chat_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1869,7 +2044,7 @@ func (x *Wrapper) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Wrapper.ProtoReflect.Descriptor instead.
 func (*Wrapper) Descriptor() ([]byte, []int) {
-	return file_chat_proto_rawDescGZIP(), []int{28}
+	return file_chat_proto_rawDescGZIP(), []int{31}
 }
 
 func (m *Wrapper) GetMsg() isWrapper_Msg {
@@ -2068,6 +2243,20 @@ func (x *Wrapper) GetNotifyReduceFinish() *NotifyReduceFinish {
 	return nil
 }
 
+func (x *Wrapper) GetJobInfo() *JobInfo {
+	if x, ok := x.GetMsg().(*Wrapper_JobInfo); ok {
+		return x.JobInfo
+	}
+	return nil
+}
+
+func (x *Wrapper) GetNotifyClientResult() *NotifyClientResult {
+	if x, ok := x.GetMsg().(*Wrapper_NotifyClientResult); ok {
+		return x.NotifyClientResult
+	}
+	return nil
+}
+
 type isWrapper_Msg interface {
 	isWrapper_Msg()
 }
@@ -2180,6 +2369,14 @@ type Wrapper_NotifyReduceFinish struct {
 	NotifyReduceFinish *NotifyReduceFinish `protobuf:"bytes,27,opt,name=notify_reduce_finish,json=notifyReduceFinish,proto3,oneof"`
 }
 
+type Wrapper_JobInfo struct {
+	JobInfo *JobInfo `protobuf:"bytes,28,opt,name=job_info,json=jobInfo,proto3,oneof"`
+}
+
+type Wrapper_NotifyClientResult struct {
+	NotifyClientResult *NotifyClientResult `protobuf:"bytes,29,opt,name=notify_client_result,json=notifyClientResult,proto3,oneof"`
+}
+
 func (*Wrapper_RegistrationMessage) isWrapper_Msg() {}
 
 func (*Wrapper_PutRequest) isWrapper_Msg() {}
@@ -2233,6 +2430,10 @@ func (*Wrapper_NotifyMapFinish) isWrapper_Msg() {}
 func (*Wrapper_StartReduce) isWrapper_Msg() {}
 
 func (*Wrapper_NotifyReduceFinish) isWrapper_Msg() {}
+
+func (*Wrapper_JobInfo) isWrapper_Msg() {}
+
+func (*Wrapper_NotifyClientResult) isWrapper_Msg() {}
 
 var File_chat_proto protoreflect.FileDescriptor
 
@@ -2415,6 +2616,22 @@ var file_chat_proto_rawDesc = []byte{
 	0x64, 0x69, 0x72, 0x4e, 0x61, 0x6d, 0x65, 0x22, 0x28, 0x0a, 0x0a, 0x4c, 0x73, 0x52, 0x65, 0x73,
 	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
 	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x22, 0x3b, 0x0a, 0x07, 0x4a, 0x6f, 0x62, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x14, 0x0a, 0x05,
+	0x6a, 0x6f, 0x62, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x05, 0x6a, 0x6f, 0x62,
+	0x49, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x22, 0x5e,
+	0x0a, 0x12, 0x4e, 0x6f, 0x74, 0x69, 0x66, 0x79, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x52, 0x65,
+	0x73, 0x75, 0x6c, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x30, 0x0a, 0x0d,
+	0x6a, 0x6f, 0x62, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x18, 0x02, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x4a, 0x6f, 0x62, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x52,
+	0x0d, 0x6a, 0x6f, 0x62, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x22, 0x61,
+	0x0a, 0x09, 0x4a, 0x6f, 0x62, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x66,
+	0x69, 0x6c, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x66,
+	0x69, 0x6c, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x64, 0x69, 0x72, 0x4e, 0x61,
+	0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x64, 0x69, 0x72, 0x4e, 0x61, 0x6d,
+	0x65, 0x12, 0x1e, 0x0a, 0x04, 0x6e, 0x6f, 0x64, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x0a, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x65, 0x4e, 0x6f, 0x64, 0x65, 0x52, 0x04, 0x6e, 0x6f, 0x64,
 	0x65, 0x22, 0x92, 0x01, 0x0a, 0x0f, 0x53, 0x65, 0x6e, 0x64, 0x4d, 0x61, 0x70, 0x52, 0x65, 0x73,
 	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x37, 0x0a, 0x07, 0x64, 0x61, 0x74, 0x61, 0x4d, 0x61, 0x70,
 	0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1d, 0x2e, 0x53, 0x65, 0x6e, 0x64, 0x4d, 0x61, 0x70,
@@ -2436,7 +2653,7 @@ var file_chat_proto_rawDesc = []byte{
 	0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x64, 0x69, 0x72, 0x4e, 0x61, 0x6d, 0x65, 0x22,
 	0x23, 0x0a, 0x0b, 0x53, 0x74, 0x61, 0x72, 0x74, 0x52, 0x65, 0x64, 0x75, 0x63, 0x65, 0x12, 0x14,
 	0x0a, 0x05, 0x6a, 0x6f, 0x62, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x05, 0x6a,
-	0x6f, 0x62, 0x49, 0x64, 0x22, 0xd9, 0x0d, 0x0a, 0x07, 0x57, 0x72, 0x61, 0x70, 0x70, 0x65, 0x72,
+	0x6f, 0x62, 0x49, 0x64, 0x22, 0xc9, 0x0e, 0x0a, 0x07, 0x57, 0x72, 0x61, 0x70, 0x70, 0x65, 0x72,
 	0x12, 0x42, 0x0a, 0x14, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e,
 	0x5f, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0d,
 	0x2e, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x00, 0x52,
@@ -2545,7 +2762,14 @@ var file_chat_proto_rawDesc = []byte{
 	0x65, 0x5f, 0x66, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x18, 0x1b, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13,
 	0x2e, 0x4e, 0x6f, 0x74, 0x69, 0x66, 0x79, 0x52, 0x65, 0x64, 0x75, 0x63, 0x65, 0x46, 0x69, 0x6e,
 	0x69, 0x73, 0x68, 0x48, 0x00, 0x52, 0x12, 0x6e, 0x6f, 0x74, 0x69, 0x66, 0x79, 0x52, 0x65, 0x64,
-	0x75, 0x63, 0x65, 0x46, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x42, 0x05, 0x0a, 0x03, 0x6d, 0x73, 0x67,
+	0x75, 0x63, 0x65, 0x46, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x12, 0x25, 0x0a, 0x08, 0x6a, 0x6f, 0x62,
+	0x5f, 0x69, 0x6e, 0x66, 0x6f, 0x18, 0x1c, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x08, 0x2e, 0x4a, 0x6f,
+	0x62, 0x49, 0x6e, 0x66, 0x6f, 0x48, 0x00, 0x52, 0x07, 0x6a, 0x6f, 0x62, 0x49, 0x6e, 0x66, 0x6f,
+	0x12, 0x47, 0x0a, 0x14, 0x6e, 0x6f, 0x74, 0x69, 0x66, 0x79, 0x5f, 0x63, 0x6c, 0x69, 0x65, 0x6e,
+	0x74, 0x5f, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x1d, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13,
+	0x2e, 0x4e, 0x6f, 0x74, 0x69, 0x66, 0x79, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73,
+	0x75, 0x6c, 0x74, 0x48, 0x00, 0x52, 0x12, 0x6e, 0x6f, 0x74, 0x69, 0x66, 0x79, 0x43, 0x6c, 0x69,
+	0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x42, 0x05, 0x0a, 0x03, 0x6d, 0x73, 0x67,
 	0x42, 0x0c, 0x5a, 0x0a, 0x2e, 0x2f, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x62, 0x06,
 	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
@@ -2562,7 +2786,7 @@ func file_chat_proto_rawDescGZIP() []byte {
 	return file_chat_proto_rawDescData
 }
 
-var file_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_chat_proto_goTypes = []interface{}{
 	(*Registration)(nil),       // 0: Registration
 	(*PutRequest)(nil),         // 1: PutRequest
@@ -2589,59 +2813,66 @@ var file_chat_proto_goTypes = []interface{}{
 	(*GetMapRequest)(nil),      // 22: GetMapRequest
 	(*LsRequest)(nil),          // 23: LsRequest
 	(*LsResponse)(nil),         // 24: LsResponse
-	(*SendMapResponse)(nil),    // 25: SendMapResponse
-	(*SendReduceTask)(nil),     // 26: SendReduceTask
-	(*StartReduce)(nil),        // 27: StartReduce
-	(*Wrapper)(nil),            // 28: Wrapper
-	nil,                        // 29: PutResponse.ChunkMapEntry
-	nil,                        // 30: GetResponse.GetResponseEntry
-	nil,                        // 31: NodeMap.NodeMapEntry
-	nil,                        // 32: SendMapResponse.DataMapEntry
+	(*JobInfo)(nil),            // 25: JobInfo
+	(*NotifyClientResult)(nil), // 26: NotifyClientResult
+	(*JobResult)(nil),          // 27: JobResult
+	(*SendMapResponse)(nil),    // 28: SendMapResponse
+	(*SendReduceTask)(nil),     // 29: SendReduceTask
+	(*StartReduce)(nil),        // 30: StartReduce
+	(*Wrapper)(nil),            // 31: Wrapper
+	nil,                        // 32: PutResponse.ChunkMapEntry
+	nil,                        // 33: GetResponse.GetResponseEntry
+	nil,                        // 34: NodeMap.NodeMapEntry
+	nil,                        // 35: SendMapResponse.DataMapEntry
 }
 var file_chat_proto_depIdxs = []int32{
 	10, // 0: SendMapTask.nodeList:type_name -> StoreNode
-	29, // 1: PutResponse.chunkMap:type_name -> PutResponse.ChunkMapEntry
-	30, // 2: GetResponse.getResponse:type_name -> GetResponse.GetResponseEntry
-	31, // 3: NodeMap.nodeMap:type_name -> NodeMap.NodeMapEntry
+	32, // 1: PutResponse.chunkMap:type_name -> PutResponse.ChunkMapEntry
+	33, // 2: GetResponse.getResponse:type_name -> GetResponse.GetResponseEntry
+	34, // 3: NodeMap.nodeMap:type_name -> NodeMap.NodeMapEntry
 	10, // 4: ReplicaChunk.nodeLists:type_name -> StoreNode
 	10, // 5: ChunkNodeInfo.nodeList:type_name -> StoreNode
-	32, // 6: SendMapResponse.dataMap:type_name -> SendMapResponse.DataMapEntry
-	0,  // 7: Wrapper.registration_message:type_name -> Registration
-	1,  // 8: Wrapper.put_request:type_name -> PutRequest
-	7,  // 9: Wrapper.put_response:type_name -> PutResponse
-	12, // 10: Wrapper.heartbeat_message:type_name -> HeartBeat
-	13, // 11: Wrapper.replicaChunk_message:type_name -> ReplicaChunk
-	16, // 12: Wrapper.ack_replica_chunk_message:type_name -> AckReplicaChunk
-	17, // 13: Wrapper.get_replica_message:type_name -> GetReplica
-	18, // 14: Wrapper.return_chunk_message:type_name -> ReturnReplica
-	19, // 15: Wrapper.delete_replicas_message:type_name -> DeleteReplicas
-	21, // 16: Wrapper.chunk_node_info_message:type_name -> ChunkNodeInfo
-	22, // 17: Wrapper.get_map_request_message:type_name -> GetMapRequest
-	25, // 18: Wrapper.send_map_response_message:type_name -> SendMapResponse
-	8,  // 19: Wrapper.get_request_message:type_name -> GetRequest
-	9,  // 20: Wrapper.get_response_message:type_name -> GetResponse
-	11, // 21: Wrapper.nodeMap_message:type_name -> NodeMap
-	14, // 22: Wrapper.file_not_exist_message:type_name -> FileNotExist
-	20, // 23: Wrapper.delete_request_message:type_name -> DeleteRequest
-	23, // 24: Wrapper.ls_request_message:type_name -> LsRequest
-	24, // 25: Wrapper.ls_response_message:type_name -> LsResponse
-	15, // 26: Wrapper.file_exist_message:type_name -> FileExist
-	2,  // 27: Wrapper.submit_job_message:type_name -> SubmitJobRequest
-	3,  // 28: Wrapper.send_map_task:type_name -> SendMapTask
-	26, // 29: Wrapper.send_reduce_task:type_name -> SendReduceTask
-	4,  // 30: Wrapper.send_map_result:type_name -> SendMapResult
-	5,  // 31: Wrapper.notify_map_finish:type_name -> NotifyMapFinish
-	27, // 32: Wrapper.start_reduce:type_name -> StartReduce
-	6,  // 33: Wrapper.notify_reduce_finish:type_name -> NotifyReduceFinish
-	21, // 34: PutResponse.ChunkMapEntry.value:type_name -> ChunkNodeInfo
-	11, // 35: GetResponse.GetResponseEntry.value:type_name -> NodeMap
-	21, // 36: NodeMap.NodeMapEntry.value:type_name -> ChunkNodeInfo
-	12, // 37: SendMapResponse.DataMapEntry.value:type_name -> HeartBeat
-	38, // [38:38] is the sub-list for method output_type
-	38, // [38:38] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	27, // 6: NotifyClientResult.jobResultList:type_name -> JobResult
+	10, // 7: JobResult.node:type_name -> StoreNode
+	35, // 8: SendMapResponse.dataMap:type_name -> SendMapResponse.DataMapEntry
+	0,  // 9: Wrapper.registration_message:type_name -> Registration
+	1,  // 10: Wrapper.put_request:type_name -> PutRequest
+	7,  // 11: Wrapper.put_response:type_name -> PutResponse
+	12, // 12: Wrapper.heartbeat_message:type_name -> HeartBeat
+	13, // 13: Wrapper.replicaChunk_message:type_name -> ReplicaChunk
+	16, // 14: Wrapper.ack_replica_chunk_message:type_name -> AckReplicaChunk
+	17, // 15: Wrapper.get_replica_message:type_name -> GetReplica
+	18, // 16: Wrapper.return_chunk_message:type_name -> ReturnReplica
+	19, // 17: Wrapper.delete_replicas_message:type_name -> DeleteReplicas
+	21, // 18: Wrapper.chunk_node_info_message:type_name -> ChunkNodeInfo
+	22, // 19: Wrapper.get_map_request_message:type_name -> GetMapRequest
+	28, // 20: Wrapper.send_map_response_message:type_name -> SendMapResponse
+	8,  // 21: Wrapper.get_request_message:type_name -> GetRequest
+	9,  // 22: Wrapper.get_response_message:type_name -> GetResponse
+	11, // 23: Wrapper.nodeMap_message:type_name -> NodeMap
+	14, // 24: Wrapper.file_not_exist_message:type_name -> FileNotExist
+	20, // 25: Wrapper.delete_request_message:type_name -> DeleteRequest
+	23, // 26: Wrapper.ls_request_message:type_name -> LsRequest
+	24, // 27: Wrapper.ls_response_message:type_name -> LsResponse
+	15, // 28: Wrapper.file_exist_message:type_name -> FileExist
+	2,  // 29: Wrapper.submit_job_message:type_name -> SubmitJobRequest
+	3,  // 30: Wrapper.send_map_task:type_name -> SendMapTask
+	29, // 31: Wrapper.send_reduce_task:type_name -> SendReduceTask
+	4,  // 32: Wrapper.send_map_result:type_name -> SendMapResult
+	5,  // 33: Wrapper.notify_map_finish:type_name -> NotifyMapFinish
+	30, // 34: Wrapper.start_reduce:type_name -> StartReduce
+	6,  // 35: Wrapper.notify_reduce_finish:type_name -> NotifyReduceFinish
+	25, // 36: Wrapper.job_info:type_name -> JobInfo
+	26, // 37: Wrapper.notify_client_result:type_name -> NotifyClientResult
+	21, // 38: PutResponse.ChunkMapEntry.value:type_name -> ChunkNodeInfo
+	11, // 39: GetResponse.GetResponseEntry.value:type_name -> NodeMap
+	21, // 40: NodeMap.NodeMapEntry.value:type_name -> ChunkNodeInfo
+	12, // 41: SendMapResponse.DataMapEntry.value:type_name -> HeartBeat
+	42, // [42:42] is the sub-list for method output_type
+	42, // [42:42] is the sub-list for method input_type
+	42, // [42:42] is the sub-list for extension type_name
+	42, // [42:42] is the sub-list for extension extendee
+	0,  // [0:42] is the sub-list for field type_name
 }
 
 func init() { file_chat_proto_init() }
@@ -2951,7 +3182,7 @@ func file_chat_proto_init() {
 			}
 		}
 		file_chat_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SendMapResponse); i {
+			switch v := v.(*JobInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2963,7 +3194,7 @@ func file_chat_proto_init() {
 			}
 		}
 		file_chat_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SendReduceTask); i {
+			switch v := v.(*NotifyClientResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2975,7 +3206,7 @@ func file_chat_proto_init() {
 			}
 		}
 		file_chat_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StartReduce); i {
+			switch v := v.(*JobResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2987,6 +3218,42 @@ func file_chat_proto_init() {
 			}
 		}
 		file_chat_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SendMapResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_chat_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SendReduceTask); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_chat_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*StartReduce); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_chat_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Wrapper); i {
 			case 0:
 				return &v.state
@@ -2999,7 +3266,7 @@ func file_chat_proto_init() {
 			}
 		}
 	}
-	file_chat_proto_msgTypes[28].OneofWrappers = []interface{}{
+	file_chat_proto_msgTypes[31].OneofWrappers = []interface{}{
 		(*Wrapper_RegistrationMessage)(nil),
 		(*Wrapper_PutRequest)(nil),
 		(*Wrapper_PutResponse)(nil),
@@ -3027,6 +3294,8 @@ func file_chat_proto_init() {
 		(*Wrapper_NotifyMapFinish)(nil),
 		(*Wrapper_StartReduce)(nil),
 		(*Wrapper_NotifyReduceFinish)(nil),
+		(*Wrapper_JobInfo)(nil),
+		(*Wrapper_NotifyClientResult)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -3034,7 +3303,7 @@ func file_chat_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_chat_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   33,
+			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -165,6 +165,8 @@ func (client *Client) receiveMsg(msgHandler *messages.MessageHandler) {
 			client.combineChunks(dict, fileName)
 		case *messages.Wrapper_LsResponseMessage:
 			fmt.Println(msg.LsResponseMessage.GetResponse())
+		case *messages.Wrapper_JobInfo:
+			fmt.Println("your job is running,your job id is: " + strconv.Itoa(int(msg.JobInfo.GetJobId())))
 		case *messages.Wrapper_SendMapResponseMessage:
 			curMap := msg.SendMapResponseMessage.DataMap
 			for key, element := range curMap {
@@ -174,6 +176,22 @@ func (client *Client) receiveMsg(msgHandler *messages.MessageHandler) {
 			fmt.Printf("file [%s] not exist\n", msg.FileNotExistMessage.FileName)
 		case *messages.Wrapper_FileExistMessage:
 			fmt.Printf("file [%s] already exists, please update a new file\n", msg.FileExistMessage.GetFilename())
+		case *messages.Wrapper_NotifyClientResult:
+			result := msg.NotifyClientResult
+			status := result.GetStatus()
+			if status == "running" {
+				fmt.Println("your job is running")
+			} else if status == "finish" {
+				list := result.GetJobResultList()
+				fmt.Println("your job is finish ,the position of result is :")
+				fmt.Printf("%5s %10s %10s  %15s %15s ", "id", "ip", "port", "dirName", "fileName")
+				for i := range list {
+					info := list[i]
+					fmt.Printf("%5d %10s %10d  %15s %15s ", info.GetNode().Id, info.GetNode().Ip, info.GetNode().Port, info.GetDirName(), info.GetFileName())
+				}
+			} else {
+				fmt.Println("wrong job id")
+			}
 		case nil:
 			log.Println("Received an empty message, terminating client")
 			quit = true
@@ -372,6 +390,26 @@ func (client *Client) handleSubmitJob(message string) {
 	client.sendMsgToController(wrapper)
 }
 
+func (client *Client) handleGetJobInfo(message string) {
+	split := strings.Split(message, " ")
+	if len(split) != 2 {
+		log.Println("wrong input params")
+	}
+	id, err := strconv.Atoi(split[1])
+	if err != nil {
+		log.Println("wrong input params,job id needs to be int")
+	}
+	wrapper := &messages.Wrapper{
+		Msg: &messages.Wrapper_JobInfo{
+			JobInfo: &messages.JobInfo{
+				JobId:    uint32(id),
+				ClientId: client.id,
+			},
+		},
+	}
+	client.sendMsgToController(wrapper)
+}
+
 func main() {
 	res, err := strconv.ParseInt(os.Args[1], 10, 32)
 	if err != nil {
@@ -426,6 +464,8 @@ func main() {
 				go client.handleDeleteRequest(fileName, filePath)
 			} else if strings.HasPrefix(message, "submit") {
 				go client.handleSubmitJob(message)
+			} else if strings.HasPrefix(message, "job") {
+				go client.handleGetJobInfo(message)
 			} else {
 				fmt.Println("Unknown command!")
 			}

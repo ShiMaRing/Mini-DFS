@@ -2,11 +2,10 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"log"
 	"os"
+	"strconv"
 )
 
 // Result outPut Result
@@ -23,31 +22,29 @@ type InputData struct {
 
 // Map user should realize
 func Map(line int, data []byte) *Result {
-	bytesBuffer := bytes.NewBuffer([]byte{})
-	binary.Write(bytesBuffer, binary.LittleEndian, int32(1))
+	itoa := strconv.Itoa(1)
 	return &Result{
 		Key:   data,
-		Value: bytesBuffer.Bytes(),
+		Value: []byte(itoa),
 	}
 }
 
 // Reduce user should realize
 func Reduce(inputKey []byte, data [][]byte) *Result {
-	var sum int32
+	var sum int
 	for i := range data {
-		bytesBuffer := bytes.NewBuffer(data[i])
-		var u int32
-		_ = binary.Read(bytesBuffer, binary.LittleEndian, &u)
-		sum += u
+		s := string(data[i])
+		atoi, _ := strconv.Atoi(s)
+		sum += atoi
 	}
-	bytesBuffer := bytes.NewBuffer([]byte{})
-	binary.Write(bytesBuffer, binary.LittleEndian, sum)
+	itoa := strconv.Itoa(sum)
 	return &Result{
 		Key:   inputKey,
-		Value: bytesBuffer.Bytes(),
+		Value: []byte(itoa),
 	}
 }
 
+//Don't change main func ,user just need to modify map fun and reduce func
 func main() {
 	op := os.Args[1]
 	filePath := os.Args[2]
@@ -88,7 +85,7 @@ func main() {
 		}
 	}
 	//write results to output file
-	outputFile, err := os.OpenFile(outPutPath, os.O_CREATE|os.O_RDWR, os.ModePerm)
+	outputFile, err := os.OpenFile(outPutPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		log.Fatalln("create out put file fail:", err)
 	}
