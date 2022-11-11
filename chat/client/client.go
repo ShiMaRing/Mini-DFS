@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/emirpasic/gods/lists/arraylist"
+	"io"
 	"io/ioutil"
 	"log"
 	"math"
@@ -233,8 +234,8 @@ func sendChunkToNode(i int32, nodeList []*messages.StoreNode, bytes *[]byte, fil
 		chunkIdx, host, port)
 }
 
-// split the file into chunks, each chunk contains 1 MB data
-func splitFile(path string) *arraylist.List {
+// split the file into chunks, each chunk contains 1 MB data,if type is text ,will split with line
+func splitFile(path string, splitType string) *arraylist.List {
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatalln(err)
@@ -253,11 +254,40 @@ func splitFile(path string) *arraylist.List {
 	// calculate total number of parts the file will be chunked into
 	totalPartsNum := uint64(math.Ceil(float64(fileSize) / float64(fileChunk)))
 	log.Printf("Splitting to %d pieces.\n", totalPartsNum)
-	for i := uint64(0); i < totalPartsNum; i++ {
-		partSize := int(math.Min(float64(fileChunk), float64(fileSize-int64(i*uint64(fileChunk)))))
-		partBuffer := make([]byte, partSize)
-		file.Read(partBuffer)
-		chunkList.Add(partBuffer)
+	if splitType == "binary" {
+		for i := uint64(0); i < totalPartsNum; i++ {
+			partSize := int(math.Min(float64(fileChunk), float64(fileSize-int64(i*uint64(fileChunk)))))
+			partBuffer := make([]byte, partSize)
+			file.Read(partBuffer)
+			chunkList.Add(partBuffer)
+		}
+	} else {
+		var offset int64
+		//split in line
+		for i := uint64(0); i < totalPartsNum; i++ {
+			file.Seek(offset, 0)
+			reader := bufio.NewReader(file)
+			var cumulativeSize int64
+			part := make([]byte, 0)
+			for {
+				if cumulativeSize > int64(fileChunk) {
+					break
+				}
+				b, err := reader.ReadBytes('\n')
+				if err == io.EOF {
+					part = append(part, b...)
+					chunkList.Add(part)
+					return chunkList
+				}
+				if err != nil {
+					panic(err)
+				}
+				part = append(part, b...)
+				cumulativeSize += int64(len(b))
+			}
+			chunkList.Add(part)
+			offset += cumulativeSize
+		}
 	}
 	return chunkList
 }
@@ -322,12 +352,12 @@ func (client *Client) handleDeleteRequest(fn string, fp string) {
 }
 
 // Handle put requests.
-func (client *Client) handlePutRequest(dirName string, filePath string) {
+func (client *Client) handlePutRequest(dirName string, filePath string, splitType string) {
 	putMessage := messages.PutRequest{ClientId: client.id, DirName: dirName}
 	split := strings.Split(filePath, "/")
 	fileName := split[len(split)-1]
 	putMessage.FileName = fileName
-	chunkList := splitFile(filePath)
+	chunkList := splitFile(filePath, splitType)
 	putMessage.NumOfChunk = int32(chunkList.Size())
 	log.Printf("file name is: %s, dir is: %s", fileName, dirName)
 	client.chunkMap.Store(fileName, chunkList)
@@ -436,13 +466,16 @@ func main() {
 				splits := strings.Split(message, " ")
 				var filePath string
 				var dirName = ""
-				if len(splits) == 3 {
+				var splitType = "binary"
+				if len(splits) == 4 {
 					filePath = splits[1]
 					dirName = splits[2]
-				} else if len(splits) == 2 {
+					splitType = splits[3]
+				} else if len(splits) == 3 {
 					filePath = splits[1]
+					splitType = splits[2]
 				}
-				go client.handlePutRequest(dirName, filePath)
+				go client.handlePutRequest(dirName, filePath, splitType)
 			} else if message == "ls" {
 				// handle 'ls' command
 				log.Println("received a ls command")

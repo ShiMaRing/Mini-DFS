@@ -44,7 +44,7 @@ func Reduce(inputKey []byte, data [][]byte) *Result {
 	}
 }
 
-//Don't change main func ,user just need to modify map fun and reduce func
+//you only need to write code to read file and send data to map func
 func main() {
 	op := os.Args[1]
 	filePath := os.Args[2]
@@ -56,6 +56,7 @@ func main() {
 	results := make([]*Result, 0)
 	switch op {
 	case "map":
+		//read file and do map,you should deal with it yourself
 		scanner := bufio.NewScanner(f)
 		line := 1
 		for scanner.Scan() {
@@ -67,6 +68,7 @@ func main() {
 			result := Map(line, data)
 			results = append(results, result)
 		}
+
 	case "reduce":
 		//read line by line
 		scanner := bufio.NewScanner(f)

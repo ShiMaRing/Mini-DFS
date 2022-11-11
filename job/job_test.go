@@ -6,8 +6,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"testing"
 )
@@ -62,4 +64,44 @@ func TestWrite(t *testing.T) {
 	fmt.Println(bytesBuffer.Bytes())
 	writer.Write(bytesBuffer.Bytes())
 	writer.Flush()
+}
+
+// split the file into chunks, each chunk contains 1 MB data,if type is text ,will split with line
+func TestSplitFile(t *testing.T) {
+	file, err := os.Open("test.txt")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer file.Close()
+	fileInfo, _ := file.Stat()
+	var fileSize = fileInfo.Size()
+	var fileChunk = 4
+	// calculate total number of parts the file will be chunked into
+	totalPartsNum := uint64(math.Ceil(float64(fileSize) / float64(fileChunk)))
+	var offset int64
+	//split in line
+	for i := uint64(0); i < totalPartsNum; i++ {
+		file.Seek(offset, 0)
+		reader := bufio.NewReader(file)
+		var cumulativeSize int64
+		part := make([]byte, 0)
+		for {
+			if cumulativeSize > int64(fileChunk) {
+				break
+			}
+			b, err := reader.ReadBytes('\n')
+			if err == io.EOF {
+				part = append(part, b...)
+				fmt.Println(string(part))
+				return
+			}
+			part = append(part, b...)
+			if err != nil {
+				panic(err)
+			}
+			cumulativeSize += int64(len(b))
+		}
+		fmt.Println(string(part))
+		offset += cumulativeSize
+	}
 }
