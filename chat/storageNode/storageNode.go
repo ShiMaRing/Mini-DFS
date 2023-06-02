@@ -42,7 +42,7 @@ type ReduceTask struct {
 	basePath    string
 	data        map[int32][]*messages.Result //chunkId - chunk Data
 	//    dirname
-	//               |- reduce-id             //basePath
+	//               |- reduce-id
 	//                          |--            jobName
 	//                                         reduceResult
 }
@@ -544,10 +544,8 @@ func (storageNode *StorageNode) doReduce(jobId uint32) {
 	//make input data format
 	inputFileName := task.basePath + "/reduce-tmp"
 	outPutFileName := task.basePath + "/" + task.fileName + "-result"
-
 	inputFileName, _ = filepath.Abs(inputFileName)
 	outPutFileName, _ = filepath.Abs(outPutFileName)
-
 	inputFile, err := os.OpenFile(inputFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		log.Println("create tmp file to reduce fail:", err)
@@ -584,6 +582,7 @@ func (storageNode *StorageNode) doReduce(jobId uint32) {
 		Msg: &messages.Wrapper_NotifyReduceFinish{NotifyReduceFinish: notify},
 	}
 	msgHandler.Send(wrapper)
+	delete(storageNode.ReduceTask, jobId) //finish and free the memory
 	log.Printf("node %d finish reduce process", storageNode.Id)
 }
 
